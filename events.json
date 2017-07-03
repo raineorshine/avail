@@ -1,0 +1,628 @@
+[
+{
+"kind": "calendar#event",
+"etag": "\"2965406647606000\"",
+"id": "_6kqjcdi66kq30ba36sr30b9k8cs4ab9o8d0jib9n6l33ih2284o4aga16g",
+"status": "confirmed",
+"htmlLink": "https://www.google.com/calendar/event?eid=XzZrcWpjZGk2NmtxMzBiYTM2c3IzMGI5azhjczRhYjlvOGQwamliOW42bDMzaWgyMjg0bzRhZ2ExNmcgcmFpbmVvcnNoaW5lQG0",
+"created": "2016-12-25T22:02:03.000Z",
+"updated": "2016-12-25T22:02:03.803Z",
+"summary": "GP Indianapolis",
+"creator": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"organizer": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"start": {
+"date": "2017-08-25"
+},
+"end": {
+"date": "2017-08-28"
+},
+"iCalUID": "5566F540-C760-4C8E-8CA9-75F9DBA0EAA4",
+"sequence": 0,
+"reminders": {
+"useDefault": false
+}
+},
+{
+"kind": "calendar#event",
+"etag": "\"2965406745500000\"",
+"id": "_70ok4gq46sq46b9g88qjeb9k6p1jeba1711kab9p8523ccq288qj6h1p6s",
+"status": "confirmed",
+"htmlLink": "https://www.google.com/calendar/event?eid=Xzcwb2s0Z3E0NnNxNDZiOWc4OHFqZWI5azZwMWplYmExNzExa2FiOXA4NTIzY2NxMjg4cWo2aDFwNnMgcmFpbmVvcnNoaW5lQG0",
+"created": "2016-12-25T22:02:52.000Z",
+"updated": "2016-12-25T22:02:52.750Z",
+"summary": "GP Providence",
+"creator": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"organizer": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"start": {
+"date": "2017-09-29"
+},
+"end": {
+"date": "2017-10-02"
+},
+"iCalUID": "81BCD74C-0B57-46C7-A8CE-9AD63BB53D97",
+"sequence": 0,
+"reminders": {
+"useDefault": false
+}
+},
+{
+"kind": "calendar#event",
+"etag": "\"2965406861878000\"",
+"id": "_8ko42h256ss3ib9m6t2jab9k6l342ba284qjgb9n752k4e1m64q46d9j84",
+"status": "confirmed",
+"htmlLink": "https://www.google.com/calendar/event?eid=XzhrbzQyaDI1NnNzM2liOW02dDJqYWI5azZsMzQyYmEyODRxamdiOW43NTJrNGUxbTY0cTQ2ZDlqODQgcmFpbmVvcnNoaW5lQG0",
+"created": "2016-12-25T22:03:50.000Z",
+"updated": "2016-12-25T22:03:50.939Z",
+"summary": "GP Phoenix",
+"creator": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"organizer": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"start": {
+"date": "2017-10-27"
+},
+"end": {
+"date": "2017-10-31"
+},
+"iCalUID": "E0ADE789-67E5-45FA-BA58-79EB8614C53A",
+"sequence": 0,
+"reminders": {
+"useDefault": false
+}
+},
+{
+"kind": "calendar#event",
+"etag": "\"2976408259710000\"",
+"id": "_68rj6d256gok8b9g6or3cb9k8cr46b9o84sj0ba160pj8di56d33ae1h8c",
+"status": "confirmed",
+"htmlLink": "https://www.google.com/calendar/event?eid=XzY4cmo2ZDI1NmdvazhiOWc2b3IzY2I5azhjcjQ2YjlvODRzajBiYTE2MHBqOGRpNTZkMzNhZTFoOGMgcmFpbmVvcnNoaW5lQG0",
+"created": "2017-02-27T14:02:09.000Z",
+"updated": "2017-02-27T14:02:09.855Z",
+"summary": "Integral Living Room",
+"creator": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"organizer": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"start": {
+"date": "2017-11-09"
+},
+"end": {
+"date": "2017-11-13"
+},
+"iCalUID": "2734E41D-0666-4C6C-8A90-A0346E3F581C",
+"sequence": 0,
+"reminders": {
+"useDefault": false
+}
+},
+{
+"kind": "calendar#event",
+"etag": "\"2977495067380000\"",
+"id": "_691jcci288qk2b9g84sjgb9k60rk2b9o6cqjeba464p46h9m71130ha38g",
+"status": "confirmed",
+"htmlLink": "https://www.google.com/calendar/event?eid=XzY5MWpjY2kyODhxazJiOWc4NHNqZ2I5azYwcmsyYjlvNmNxamViYTQ2NHA0Nmg5bTcxMTMwaGEzOGcgcmFpbmVvcnNoaW5lQG0",
+"created": "2017-03-05T20:58:53.000Z",
+"updated": "2017-03-05T20:58:53.690Z",
+"summary": "Erin",
+"creator": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"organizer": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"start": {
+"dateTime": "2017-04-11T16:00:00-06:00"
+},
+"end": {
+"dateTime": "2017-04-11T18:00:00-06:00"
+},
+"iCalUID": "2C62BB5A-0A98-407A-8357-D12CE68B0ECD",
+"sequence": 0,
+"reminders": {
+"useDefault": true
+}
+},
+{
+"kind": "calendar#event",
+"etag": "\"2977867932776000\"",
+"id": "_8d23eh9j68ok8b9m84p36b9k6kqk4ba28p2jab9n8d136ghg8os30d9m88",
+"status": "confirmed",
+"htmlLink": "https://www.google.com/calendar/event?eid=XzhkMjNlaDlqNjhvazhiOW04NHAzNmI5azZrcWs0YmEyOHAyamFiOW44ZDEzNmdoZzhvczMwZDltODggcmFpbmVvcnNoaW5lQG0",
+"created": "2017-03-08T00:46:06.000Z",
+"updated": "2017-03-08T00:46:06.388Z",
+"summary": "Exit Interview Lecture",
+"creator": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"organizer": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"start": {
+"dateTime": "2017-04-25T16:00:00-06:00"
+},
+"end": {
+"dateTime": "2017-04-25T17:30:00-06:00"
+},
+"iCalUID": "CD7E321D-6A23-455B-BFE5-7CB3B0F8056B",
+"sequence": 0,
+"reminders": {
+"useDefault": true
+}
+},
+{
+"kind": "calendar#event",
+"etag": "\"2979776726290000\"",
+"id": "_60r30h1g6krk8ba170qj4b9k70o46ba2612jcba284oj8ca58crjigi284",
+"status": "confirmed",
+"htmlLink": "https://www.google.com/calendar/event?eid=XzYwcjMwaDFnNmtyazhiYTE3MHFqNGI5azcwbzQ2YmEyNjEyamNiYTI4NG9qOGNhNThjcmppZ2kyODQgcmFpbmVvcnNoaW5lQG0",
+"created": "2017-03-19T01:52:43.000Z",
+"updated": "2017-03-19T01:52:43.145Z",
+"summary": "Devcon 3",
+"location": "Cancún",
+"creator": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"organizer": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"start": {
+"date": "2017-11-01"
+},
+"end": {
+"date": "2017-11-05"
+},
+"iCalUID": "060D057D-A852-480C-B0E6-BA141EC79BBA",
+"sequence": 0,
+"reminders": {
+"useDefault": false
+}
+},
+{
+"kind": "calendar#event",
+"etag": "\"2979891694967000\"",
+"id": "_8cq38ghj6kpjeb9h8co36b9k8or4cb9o60pk6ba468ok8c1l88s32c1h6c",
+"status": "confirmed",
+"htmlLink": "https://www.google.com/calendar/event?eid=XzhjcTM4Z2hqNmtwamViOWg4Y28zNmI5azhvcjRjYjlvNjBwazZiYTQ2OG9rOGMxbDg4czMyYzFoNmMgcmFpbmVvcnNoaW5lQG0",
+"created": "2017-03-16T13:46:39.000Z",
+"updated": "2017-03-19T17:50:50.384Z",
+"summary": "Kat",
+"creator": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"organizer": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"start": {
+"dateTime": "2017-04-02T14:00:00-06:00"
+},
+"end": {
+"dateTime": "2017-04-02T19:00:00-06:00"
+},
+"iCalUID": "C44B3537-1C03-4F6F-803C-D21D05B81013",
+"sequence": 2,
+"reminders": {
+"useDefault": false
+}
+},
+{
+"kind": "calendar#event",
+"etag": "\"2980392646364000\"",
+"id": "_60o38gpi692jeb9g6kq3eb9k6cr4aba260o46ba56os44chl70ok4d9l6k",
+"status": "confirmed",
+"htmlLink": "https://www.google.com/calendar/event?eid=XzYwbzM4Z3BpNjkyamViOWc2a3EzZWI5azZjcjRhYmEyNjBvNDZiYTU2b3M0NGNobDcwb2s0ZDlsNmsgcmFpbmVvcnNoaW5lQG0",
+"created": "2017-03-22T15:25:18.000Z",
+"updated": "2017-03-22T15:25:23.233Z",
+"summary": "Johanna Mueller",
+"location": "Paramita",
+"creator": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"organizer": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"start": {
+"dateTime": "2017-04-04T18:00:00-06:00"
+},
+"end": {
+"dateTime": "2017-04-04T20:00:00-06:00"
+},
+"iCalUID": "004C22E7-0547-436E-B00C-E68B2581B555",
+"sequence": 0,
+"reminders": {
+"useDefault": false
+}
+},
+{
+"kind": "calendar#event",
+"etag": "\"2980732687964000\"",
+"id": "_84skcdhj8cp4cb9m64r4cb9k6csj8b9o8oojcb9i68r3ghhk68rk8g9m60",
+"status": "confirmed",
+"htmlLink": "https://www.google.com/calendar/event?eid=Xzg0c2tjZGhqOGNwNGNiOW02NHI0Y2I5azZjc2o4YjlvOG9vamNiOWk2OHIzZ2hoazY4cms4ZzltNjAgcmFpbmVvcnNoaW5lQG0",
+"created": "2017-03-24T14:39:03.000Z",
+"updated": "2017-03-24T14:39:03.982Z",
+"summary": "Allison Benner",
+"location": "Highlands Wellness Center",
+"creator": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"organizer": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"start": {
+"dateTime": "2017-04-29T17:00:00-06:00"
+},
+"end": {
+"dateTime": "2017-04-29T18:30:00-06:00"
+},
+"iCalUID": "A9F63C2F-616F-4394-8F16-2268F427DA60",
+"sequence": 0,
+"reminders": {
+"useDefault": true
+}
+},
+{
+"kind": "calendar#event",
+"etag": "\"2982183824369000\"",
+"id": "_88p42ghk6spjib9n8ko48b9k88qjcba28p0j6ba26csk2h9g651kah238o",
+"status": "confirmed",
+"htmlLink": "https://www.google.com/calendar/event?eid=Xzg4cDQyZ2hrNnNwamliOW44a280OGI5azg4cWpjYmEyOHAwajZiYTI2Y3NrMmg5ZzY1MWthaDIzOG8gcmFpbmVvcnNoaW5lQG0",
+"created": "2017-03-18T21:13:22.000Z",
+"updated": "2017-04-02T00:11:52.226Z",
+"summary": "Stevie",
+"location": "Mercury Cafe\n2199 California St, Denver, CO  80205, United States",
+"creator": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"organizer": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"start": {
+"dateTime": "2017-04-03T18:00:00-06:00"
+},
+"end": {
+"dateTime": "2017-04-03T19:00:00-06:00"
+},
+"iCalUID": "B2AB4739-7E0D-4B56-BFA3-B39AE01CEDCF",
+"sequence": 0,
+"reminders": {
+"useDefault": false
+}
+},
+{
+"kind": "calendar#event",
+"etag": "\"2982296389848000\"",
+"id": "_70qk4hhn6t248ba16os46b9k612kaba28p2jeba36ss3ad1n8h23cdhj8o",
+"status": "confirmed",
+"htmlLink": "https://www.google.com/calendar/event?eid=XzcwcWs0aGhuNnQyNDhiYTE2b3M0NmI5azYxMmthYmEyOHAyamViYTM2c3MzYWQxbjhoMjNjZGhqOG8gcmFpbmVvcnNoaW5lQG0",
+"created": "2017-04-02T15:49:54.000Z",
+"updated": "2017-04-02T15:49:54.924Z",
+"summary": "Talk Sexy",
+"location": "Alchemy of Movement",
+"creator": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"organizer": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"start": {
+"dateTime": "2017-04-23T19:00:00-06:00"
+},
+"end": {
+"dateTime": "2017-04-23T21:00:00-06:00"
+},
+"iCalUID": "85BF77DD-A68C-40EE-BFE7-C78547DD663F",
+"sequence": 0,
+"reminders": {
+"useDefault": true
+}
+},
+{
+"kind": "calendar#event",
+"etag": "\"2982466017016000\"",
+"id": "_6l0jigpj88s3gb9h6ks38b9k890j8b9o8d0jcb9l6spj4ca588ok6g9j88",
+"status": "confirmed",
+"htmlLink": "https://www.google.com/calendar/event?eid=XzZsMGppZ3BqODhzM2diOWg2a3MzOGI5azg5MGo4YjlvOGQwamNiOWw2c3BqNGNhNTg4b2s2ZzlqODggcmFpbmVvcnNoaW5lQG0",
+"created": "2017-04-03T15:23:28.000Z",
+"updated": "2017-04-03T15:23:28.508Z",
+"summary": "Stephen",
+"creator": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"organizer": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"start": {
+"dateTime": "2017-04-03T17:00:00-06:00"
+},
+"end": {
+"dateTime": "2017-04-03T18:00:00-06:00"
+},
+"iCalUID": "5A9C3B88-1584-4BA4-8CA6-57321EB1CA3B",
+"sequence": 0,
+"reminders": {
+"useDefault": true
+}
+},
+{
+"kind": "calendar#event",
+"etag": "\"2982469400057000\"",
+"id": "_8d1k8g9p6gok4ba26os4ab9k84sj0b9p6kp3iba38cskad1j70rjeh2160",
+"status": "confirmed",
+"htmlLink": "https://www.google.com/calendar/event?eid=XzhkMWs4ZzlwNmdvazRiYTI2b3M0YWI5azg0c2owYjlwNmtwM2liYTM4Y3NrYWQxajcwcmplaDIxNjAgcmFpbmVvcnNoaW5lQG0",
+"created": "2017-02-03T15:03:14.000Z",
+"updated": "2017-04-03T15:52:05.434Z",
+"summary": "Speak Out",
+"location": "Bug Theater",
+"creator": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"organizer": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"start": {
+"dateTime": "2017-04-13T18:00:00-06:00"
+},
+"end": {
+"dateTime": "2017-04-13T20:00:00-06:00"
+},
+"iCalUID": "CCDA941B-B68E-4A90-9529-CC9E43877DA0",
+"sequence": 0,
+"reminders": {
+"useDefault": false
+}
+},
+{
+"kind": "calendar#event",
+"etag": "\"2982491470188000\"",
+"id": "_88s3ee1n6l2jgb9g8d0jeb9k8l0j8b9p6kp46b9k64o42g9i64q4cdpk84",
+"status": "confirmed",
+"htmlLink": "https://www.google.com/calendar/event?eid=Xzg4czNlZTFuNmwyamdiOWc4ZDBqZWI5azhsMGo4YjlwNmtwNDZiOWs2NG80Mmc5aTY0cTRjZHBrODQgcmFpbmVvcnNoaW5lQG0",
+"created": "2017-04-03T18:39:23.000Z",
+"updated": "2017-04-03T18:55:36.653Z",
+"summary": "June",
+"creator": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"organizer": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"start": {
+"dateTime": "2017-04-29T19:00:00-06:00"
+},
+"end": {
+"dateTime": "2017-04-29T21:00:00-06:00"
+},
+"iCalUID": "B87875E8-0CA7-4EA4-952C-410AA214F74A",
+"sequence": 1,
+"reminders": {
+"useDefault": false
+}
+},
+{
+"kind": "calendar#event",
+"etag": "\"2982494591544000\"",
+"id": "_6kpjici46or44b9j64r4cb9k60sk2ba164rk2ba468p38cpg6gr34c266g",
+"status": "confirmed",
+"htmlLink": "https://www.google.com/calendar/event?eid=XzZrcGppY2k0Nm9yNDRiOWo2NHI0Y2I5azYwc2syYmExNjRyazJiYTQ2OHAzOGNwZzZncjM0YzI2NmcgcmFpbmVvcnNoaW5lQG0",
+"created": "2017-04-03T19:21:35.000Z",
+"updated": "2017-04-03T19:21:35.772Z",
+"summary": "Ryan Parks",
+"creator": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"organizer": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"start": {
+"dateTime": "2017-04-05T18:00:00-06:00"
+},
+"end": {
+"dateTime": "2017-04-05T19:00:00-06:00"
+},
+"iCalUID": "5392D66B-316F-409A-A17A-D224304620F4",
+"sequence": 0,
+"reminders": {
+"useDefault": true
+}
+},
+{
+"kind": "calendar#event",
+"etag": "\"2982522802510000\"",
+"id": "_74r4achm6csk6ba16os32b9k6d1j6b9p6h146b9i8d0jec226gq42chk74",
+"status": "confirmed",
+"htmlLink": "https://www.google.com/calendar/event?eid=Xzc0cjRhY2htNmNzazZiYTE2b3MzMmI5azZkMWo2YjlwNmgxNDZiOWk4ZDBqZWMyMjZncTQyY2hrNzQgcmFpbmVvcnNoaW5lQG0",
+"created": "2017-04-03T23:16:41.000Z",
+"updated": "2017-04-03T23:16:41.255Z",
+"summary": "Mark",
+"creator": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"organizer": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"start": {
+"dateTime": "2017-04-07T14:00:00-06:00"
+},
+"end": {
+"dateTime": "2017-04-07T15:00:00-06:00"
+},
+"iCalUID": "96E2639C-A681-43C3-94BC-2CA70B44A249",
+"sequence": 0,
+"reminders": {
+"useDefault": true
+}
+},
+{
+"kind": "calendar#event",
+"etag": "\"2982681497611000\"",
+"id": "_88s46h1n8523eba56oq3ab9k8gqjcb9o6l244b9g851kad256t2j0dpl6k",
+"status": "confirmed",
+"htmlLink": "https://www.google.com/calendar/event?eid=Xzg4czQ2aDFuODUyM2ViYTU2b3EzYWI5azhncWpjYjlvNmwyNDRiOWc4NTFrYWQyNTZ0MmowZHBsNmsgcmFpbmVvcnNoaW5lQG0",
+"created": "2017-04-04T21:15:01.000Z",
+"updated": "2017-04-04T21:19:08.894Z",
+"summary": "John Shapiro",
+"creator": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"organizer": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"start": {
+"dateTime": "2017-04-09T17:00:00-06:00"
+},
+"end": {
+"dateTime": "2017-04-09T19:00:00-06:00"
+},
+"iCalUID": "B8CD7AD7-E645-4D56-85DB-0ACE4E7E0755",
+"sequence": 0,
+"reminders": {
+"useDefault": false
+}
+},
+{
+"kind": "calendar#event",
+"etag": "\"2982431303985000\"",
+"id": "_64sjcc9o850j6b9p8ko3ib9k88s3gb9p6gr3iba16goj6gpi6oqkcdhh74",
+"status": "confirmed",
+"htmlLink": "https://www.google.com/calendar/event?eid=XzY0c2pjYzlvODUwajZiOXA4a28zaWI5azg4czNnYjlwNmdyM2liYTE2Z29qNmdwaTZvcWtjZGhoNzQgcmFpbmVvcnNoaW5lQG0",
+"created": "2017-03-10T15:54:07.000Z",
+"updated": "2017-04-04T21:19:16.628Z",
+"summary": "Laure",
+"creator": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"organizer": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"start": {
+"dateTime": "2017-04-04T15:30:00-06:00"
+},
+"end": {
+"dateTime": "2017-04-04T17:30:00-06:00"
+},
+"iCalUID": "19618AA3-9E09-4B88-9469-A413C265F619",
+"sequence": 1,
+"reminders": {
+"useDefault": false
+}
+},
+{
+"kind": "calendar#event",
+"etag": "\"2982865602137000\"",
+"id": "_892jie9j8p348b9g6ook8b9k70r3aba260pkaba38grjigho8l2jac2484",
+"status": "confirmed",
+"htmlLink": "https://www.google.com/calendar/event?eid=Xzg5MmppZTlqOHAzNDhiOWc2b29rOGI5azcwcjNhYmEyNjBwa2FiYTM4Z3JqaWdobzhsMmphYzI0ODQgcmFpbmVvcnNoaW5lQG0",
+"created": "2017-04-04T17:17:09.000Z",
+"updated": "2017-04-05T22:53:21.111Z",
+"summary": "Desireé",
+"creator": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"organizer": {
+"email": "raineorshine@gmail.com",
+"displayName": "Raine Revere",
+"self": true
+},
+"start": {
+"dateTime": "2017-04-07T18:30:00-06:00"
+},
+"end": {
+"dateTime": "2017-04-07T19:30:00-06:00"
+},
+"iCalUID": "BE993FFD-061D-4865-B03E-CD79B8EE50DA",
+"sequence": 0,
+"reminders": {
+"useDefault": false
+}
+}
+]

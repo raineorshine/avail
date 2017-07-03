@@ -1,9 +1,10 @@
 const chai = require('chai')
-const avail = require('../index.js')
+const findFreeBlocks = require('../find-free-blocks.js')
 const should = chai.should()
+const events = require('../events.json')
 
 describe('avail', () => {
-  it('should do something', () => {
-    avail().should.equal(12345)
+  it('should find all free blocks', () => {
+    findFreeBlocks(events).should.deep.equal([])
   })
 })
