@@ -1,0 +1,36 @@
+{
+  "name": "avail",
+  "version": "0.0.0",
+  "description": "Smart, text-based calendar availability reporter",
+  "license": "ISC",
+  "repository": "https://github.com/raineorshine/avail",
+  "author": {
+    "name": "Raine Revere",
+    "email": "raineorshine@gmail.com",
+    "url": "https://github.com/raineorshine"
+  },
+  "engines": {
+    "node": ">=0.12.0"
+  },
+  "scripts": {
+    "test": "mocha",
+    "start": "node index.js"
+  },
+  "keywords": [
+    "text",
+    "calendar",
+    "availability"
+  ],
+  "devDependencies": {
+    "chai": "*",
+    "mocha": "*"
+  },
+  "dependencies": {
+    "bluebird": "^3.5.0",
+    "express": "^4.15.3",
+    "express-session": "^1.15.3",
+    "google-calendar": "^1.3.2",
+    "passport": "^0.3.2",
+    "passport-google-oauth": "^1.0.0"
+  }
+}
