@@ -1,5 +1,5 @@
 const chai = require('chai')
-const { findFreeBlocks, formatBlock } = require('../find-free-blocks.js')
+const { printFreeBlocks } = require('../find-free-blocks.js')
 const should = chai.should()
 
 const events = [
@@ -22,9 +22,8 @@ const events = [
 
 describe('avail', () => {
   it('should find all free blocks with default settings', () => {
-    const blocks = findFreeBlocks(events, { timeMin: (new Date('2017-07-10T03:00:00.000Z')).getTime() })
-    const formatted = blocks.map(formatBlock).join('\n')
-    formatted.should.equal(`Mon 7/10 9am-5pm
+    printFreeBlocks(events, { timeMin: (new Date('2017-07-10T03:00:00.000Z')).getTime() })
+      .should.equal(`Mon 7/10 9am-5pm
 Tue 7/11 9am-2:30pm
 Tue 7/11 3:30-5pm
 Wed 7/12 9am-5pm

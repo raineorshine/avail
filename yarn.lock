@@ -71,6 +71,10 @@ commander@2.9.0:
   dependencies:
     graceful-readlink ">= 1.0.0"
 
+commander@^2.11.0:
+  version "2.11.0"
+  resolved "https://registry.yarnpkg.com/commander/-/commander-2.11.0.tgz#157152fd1e7a6c8d98a5b715cf376df928004563"
+
 concat-map@0.0.1:
   version "0.0.1"
   resolved "https://registry.yarnpkg.com/concat-map/-/concat-map-0.0.1.tgz#d8a96bd77fd68df7793a73036a3ba0d5405d477b"
@@ -268,6 +272,17 @@ fs.realpath@^1.0.0:
 get-func-name@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/get-func-name/-/get-func-name-2.0.0.tgz#ead774abee72e20409433a066366023dd6887a41"
+
+get-stdin-promise@^0.1.1:
+  version "0.1.1"
+  resolved "https://registry.yarnpkg.com/get-stdin-promise/-/get-stdin-promise-0.1.1.tgz#8ba746bdb20a18449cca6528e6862ac7211c0e3f"
+  dependencies:
+    get-stdin "^3.0.2"
+    rsvp "^3.0.14"
+
+get-stdin@^3.0.2:
+  version "3.0.2"
+  resolved "https://registry.yarnpkg.com/get-stdin/-/get-stdin-3.0.2.tgz#c1ced24b9039b38ded85bdf161e57713b6dd4abe"
 
 glob@7.1.1:
   version "7.1.1"
@@ -612,6 +627,10 @@ range-parser@0.0.4:
 range-parser@~1.2.0:
   version "1.2.0"
   resolved "https://registry.yarnpkg.com/range-parser/-/range-parser-1.2.0.tgz#f49be6b487894ddc40dcc94a322f611092e00d5e"
+
+rsvp@^3.0.14:
+  version "3.6.1"
+  resolved "https://registry.yarnpkg.com/rsvp/-/rsvp-3.6.1.tgz#34f4a7ac2859f7bacc8f49789c5604f1e26ae702"
 
 send@0.1.4:
   version "0.1.4"
