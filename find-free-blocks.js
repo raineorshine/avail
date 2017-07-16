@@ -156,8 +156,8 @@ function findFreeBlocks(events, options={}, blocks=[]) {
   )
 }
 
-function printFreeBlocks(events) {
-  return findFreeBlocks(events).map(formatBlock).join('\n')
+function printFreeBlocks(...args) {
+  return findFreeBlocks(...args).map(formatBlock).join('\n')
 }
 
 module.exports = {
