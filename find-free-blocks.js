@@ -33,7 +33,7 @@ const findFreeBlocks = (events, options={}, blocks=[]) => {
   // set default options
   options = Object.assign({}, {
     // now to the nearest 30 min
-    timeMin: Math.floor((new Date()).getTime() / (30*min)) * (30*min),
+    timeMin: Math.floor(Date.now() / (30*min)) * (30*min),
     timespanLength: 7*day,
     dayStart: 9*hr,
     dayEnd: 17*hr,
@@ -95,15 +95,11 @@ const findFreeBlocks = (events, options={}, blocks=[]) => {
         blocks
       ) :
 
-    // 2. if the current block overlaps with an event, exclude the overlapped events and advance recursively to the next block
     // use an IIFE to create a scope for creating a local reference to the overlapping event
     (() => {
       const overlappingEvent = overlaps(events)
-      if (overlappingEvent) {
-        // console.log('event end time', (new Date(overlappingEvent.end.dateTime)).toLocaleString())
-      }
-      // console.log('block', options.)
-      // process.exit()
+
+      // 2. if the current block overlaps with an event, exclude the overlapped events and advance recursively to the next block
       return overlappingEvent ?
         findFreeBlocks(
           // since this is the first overlapping event, we can assume that all previous events won't overlap anything any more since they are in the past
@@ -112,10 +108,11 @@ const findFreeBlocks = (events, options={}, blocks=[]) => {
             // begin the search again at the end of the event
             timeMin: (new Date(overlappingEvent.end.dateTime)).getTime()
           }),
-          blocks.concat({
+          // only include the current block if it is larger than minBlockSize
+          blocks.concat((new Date(overlappingEvent.start.dateTime)).getTime() - options.timeMin >= options.minBlockSize ? {
             start: new Date(options.timeMin),
             end: new Date(overlappingEvent.start.dateTime)
-          })
+          } : [])
         ) :
 
         // 3. otherwise append the current block to the free blocks and advance recursively to the next block
@@ -125,10 +122,11 @@ const findFreeBlocks = (events, options={}, blocks=[]) => {
             // begin the search on the next day
             timeMin: today + day + options.dayStart
           }),
-          blocks.concat({
+          // only include the current block if it is larger than minBlockSize
+          blocks.concat(today + options.dayEnd - options.timeMin >= options.minBlockSize ? {
             start: new Date(options.timeMin),
             end: new Date(today + options.dayEnd)
-          })
+          } : [])
         )
     })()
   )
