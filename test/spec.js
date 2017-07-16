@@ -115,6 +115,91 @@ Sat 7/15 9am-5pm
 Sun 7/16 9am-4:15pm`)
   })
 
+  it('should handle events overlapping the beginning of the day', () => {
+
+    const events = [{
+      "summary": "A",
+      "start": { "dateTime": "2017-07-11T08:00:00-06:00" },
+      "end": { "dateTime": "2017-07-11T10:00:00-06:00" }
+    }]
+
+    printFreeBlocks(events, {
+      timeMin: (new Date('2017-07-10T03:00:00.000Z')).getTime(),
+      minBlockSize: 30*min
+    })
+      .should.equal(`Mon 7/10 9am-5pm
+Tue 7/11 10am-5pm
+Wed 7/12 9am-5pm
+Thu 7/13 9am-5pm
+Fri 7/14 9am-5pm
+Sat 7/15 9am-5pm
+Sun 7/16 9am-5pm`)
+  })
+
+  it('should handle events overlapping the end of the day', () => {
+
+    const events = [{
+      "summary": "A",
+      "start": { "dateTime": "2017-07-11T15:00:00-06:00" },
+      "end": { "dateTime": "2017-07-11T19:00:00-06:00" }
+    }]
+
+    printFreeBlocks(events, {
+      timeMin: (new Date('2017-07-10T03:00:00.000Z')).getTime(),
+      minBlockSize: 30*min
+    })
+      .should.equal(`Mon 7/10 9am-5pm
+Tue 7/11 9am-3pm
+Wed 7/12 9am-5pm
+Thu 7/13 9am-5pm
+Fri 7/14 9am-5pm
+Sat 7/15 9am-5pm
+Sun 7/16 9am-5pm`)
+  })
+
+
+  it('should handle events adjacent to the beginning of the day', () => {
+
+    const events = [{
+      "summary": "A",
+      "start": { "dateTime": "2017-07-11T09:00:00-06:00" },
+      "end": { "dateTime": "2017-07-11T10:00:00-06:00" }
+    }]
+
+    printFreeBlocks(events, {
+      timeMin: (new Date('2017-07-10T03:00:00.000Z')).getTime(),
+      minBlockSize: 30*min
+    })
+      .should.equal(`Mon 7/10 9am-5pm
+Tue 7/11 10am-5pm
+Wed 7/12 9am-5pm
+Thu 7/13 9am-5pm
+Fri 7/14 9am-5pm
+Sat 7/15 9am-5pm
+Sun 7/16 9am-5pm`)
+  })
+
+  it('should handle events adjacent to the end of the day', () => {
+
+    const events = [{
+      "summary": "A",
+      "start": { "dateTime": "2017-07-11T15:00:00-06:00" },
+      "end": { "dateTime": "2017-07-11T17:00:00-06:00" }
+    }]
+
+    printFreeBlocks(events, {
+      timeMin: (new Date('2017-07-10T03:00:00.000Z')).getTime(),
+      minBlockSize: 30*min
+    })
+      .should.equal(`Mon 7/10 9am-5pm
+Tue 7/11 9am-3pm
+Wed 7/12 9am-5pm
+Thu 7/13 9am-5pm
+Fri 7/14 9am-5pm
+Sat 7/15 9am-5pm
+Sun 7/16 9am-5pm`)
+  })
+
   it('should handle overlapping events', () => {
 
     const events = [
