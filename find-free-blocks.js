@@ -4,53 +4,31 @@ const hr = 60*min
 const day = 24*hr
 const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
-prettyDate = time => (new Date(time)).toLocaleString()
+/* private */
 
-function padMinutes(min) {
+const prettyDate = time => (new Date(time)).toLocaleString()
+const isAfternoon = date => date.getHours() >= 12
+const demilitarize = hrs => hrs - (hrs > 12 ? 12 : 0)
+const getOptionalMinutes = minutes => minutes > 0 ? ':' + padMinutes(minutes) : ''
+const getAmPm = hrs => hrs < 12 ? 'am' : 'pm'
+const formatBlockEnd = end => `${demilitarize(end.getHours())}${getOptionalMinutes(end.getMinutes())}${getAmPm(end.getHours())}`
+const formatBlock = block => `${formatBlockStart(block.start, block.end)}-${formatBlockEnd(block.end)}`
+const blocksOverlap = (a, b) => a.start < b.end && a.end > b.start
+
+const padMinutes = min => {
   const minString = min.toString()
   return (minString.length == '2' ? '' : '0') + minString
 }
 
-function isAfternoon(date) {
-  return date.getHours() >= 12
-}
-
-function demilitarize(hrs) {
-  return hrs - (hrs > 12 ? 12 : 0)
-}
-
-function getOptionalMinutes(minutes) {
-  return minutes > 0 ? ':' + padMinutes(minutes) : ''
-}
-
-function getAmPm(hrs) {
-  return hrs < 12 ? 'am' : 'pm'
-}
-
 // end needed to determine if am/pm can be omitted
-function formatBlockStart(start, end) {
+const formatBlockStart = (start, end) => {
   const sameAmPm = isAfternoon(start) === isAfternoon(end)
   return `${daysOfWeek[start.getDay()]} ${start.getMonth()+1}/${start.getDate()} ${demilitarize(start.getHours())}${getOptionalMinutes(start.getMinutes())}${!sameAmPm ? getAmPm(start.getHours()) : ''}`
 }
 
-function formatBlockEnd(end) {
-  return `${demilitarize(end.getHours())}${getOptionalMinutes(end.getMinutes())}${getAmPm(end.getHours())}`
-}
+/* public */
 
-function formatBlock(block) {
-  // console.log(`${formatBlockStart(block.start, block.end)}-${formatBlockEnd(block.end)}`)
-  return `${formatBlockStart(block.start, block.end)}-${formatBlockEnd(block.end)}`
-}
-
-// returns true if a two blocks overlap
-function blocksOverlap(a, b) {
-  // (new Date(events[0].start.dateTime))
-  const overlaps = a.start < b.end && a.end > b.start
-  // console.log('overlaps', overlaps)
-  return overlaps
-}
-
-function findFreeBlocks(events, options={}, blocks=[]) {
+const findFreeBlocks = (events, options={}, blocks=[]) => {
 
   // set default options
   options = Object.assign({}, {
@@ -156,9 +134,7 @@ function findFreeBlocks(events, options={}, blocks=[]) {
   )
 }
 
-function printFreeBlocks(...args) {
-  return findFreeBlocks(...args).map(formatBlock).join('\n')
-}
+const printFreeBlocks = (...args) => findFreeBlocks(...args).map(formatBlock).join('\n')
 
 module.exports = {
   formatBlock,
