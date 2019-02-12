@@ -10,7 +10,18 @@ Not published (yet)
 $ npm install --global ???
 ```-->
 
-## Usage
+Copy `config.example.json` to `config.json` and enter Google API details.
+
+## Web Server
+
+```
+npm run start
+open http://localhost:8082
+open http://localhost:8082/TEST@TEST.COM
+open http://localhost:8082/TEST@TEST.COM/EVENT_ID
+```
+
+## CLI
 
 ```sh
 $ events.json < avail
