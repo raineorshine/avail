@@ -1,5 +1,5 @@
 const chai = require('chai')
-const { printFreeBlocks } = require('../find-free-blocks.js')
+const { flattenEvents, printFreeBlocks } = require('../find-free-blocks.js')
 const should = chai.should()
 
 const sec = 1000
@@ -9,6 +9,74 @@ const day = 24*hr
 const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 describe('avail', () => {
+
+describe('flattenEvents', () => {
+
+  it('should flatten multiple sorted event lists into a single sorted event list', () => {
+    flattenEvents([
+      [
+        {
+          "summary": "D",
+          "start": { "dateTime": "2017-07-11T12:00:00-06:00" },
+          "end": { "dateTime": "2017-07-11T13:00:00-06:00" }
+        }
+      ],
+      [
+        {
+          "summary": "B",
+          "start": { "dateTime": "2017-07-11T10:00:00-06:00" },
+          "end": { "dateTime": "2017-07-11T11:00:00-06:00" }
+        },
+        {
+          "summary": "C",
+          "start": { "dateTime": "2017-07-11T11:00:00-06:00" },
+          "end": { "dateTime": "2017-07-11T12:00:00-06:00" }
+        }
+      ],
+      [
+        {
+          "summary": "A",
+          "start": { "dateTime": "2017-07-11T09:00:00-06:00" },
+          "end": { "dateTime": "2017-07-11T10:00:00-06:00" }
+        },
+        {
+          "summary": "E",
+          "start": { "dateTime": "2017-07-11T13:00:00-06:00" },
+          "end": { "dateTime": "2017-07-11T14:00:00-06:00" }
+        }
+      ]
+    ]).should.deep.equal([
+      {
+        "summary": "A",
+        "start": { "dateTime": "2017-07-11T09:00:00-06:00" },
+        "end": { "dateTime": "2017-07-11T10:00:00-06:00" }
+      },
+      {
+        "summary": "B",
+        "start": { "dateTime": "2017-07-11T10:00:00-06:00" },
+        "end": { "dateTime": "2017-07-11T11:00:00-06:00" }
+      },
+      {
+        "summary": "C",
+        "start": { "dateTime": "2017-07-11T11:00:00-06:00" },
+        "end": { "dateTime": "2017-07-11T12:00:00-06:00" }
+      },
+      {
+        "summary": "D",
+        "start": { "dateTime": "2017-07-11T12:00:00-06:00" },
+        "end": { "dateTime": "2017-07-11T13:00:00-06:00" }
+      },
+      {
+        "summary": "E",
+        "start": { "dateTime": "2017-07-11T13:00:00-06:00" },
+        "end": { "dateTime": "2017-07-11T14:00:00-06:00" }
+      }
+    ])
+  })
+
+})
+
+describe('printFreeBlocks', () => {
 
   it('should find all free blocks with default settings', () => {
 
@@ -227,5 +295,7 @@ Fri 7/14 9am-5pm
 Sat 7/15 9am-5pm
 Sun 7/16 9am-5pm`)
   })
+
+})
 
 })

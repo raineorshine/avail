@@ -134,8 +134,27 @@ const findFreeBlocks = (events, options={}, blocks=[]) => {
 
 const printFreeBlocks = (...args) => findFreeBlocks(...args).map(formatBlock).join('\n')
 
+/* flatten multiple sorted event lists into a single sorted event list */
+const flattenEvents = lists => {
+  if (lists.length === 0) {
+    return []
+  }
+
+  const minListResult = lists.reduce((acc, list, i) => {
+    return list.length && (!acc || new Date(list[0].start.dateTime) < new Date(acc.list[0].start.dateTime)) ? {
+      list: list,
+      index: i
+    } : acc
+  }, null)
+
+  return minListResult ?
+    [minListResult.list[0]].concat(flattenEvents(lists.map(list => list === minListResult.list ? list.slice(1) : list))) :
+    []
+}
+
 module.exports = {
   formatBlock,
   findFreeBlocks,
-  printFreeBlocks
+  printFreeBlocks,
+  flattenEvents
 }
