@@ -35,6 +35,7 @@ Sending someone your availability is a thirty-second interruption in the middle 
 - **The whole implementation is Swift.** (session-settled: user-directed — chosen over running the existing JavaScript through JavaScriptCore, and over keeping the JS as a cross-check oracle: one language and full Xcode debugging beat reusing the old module.) Governs R24, R25.
 - **One fixed rule set, no invocation-time prompts.** (session-settled: user-directed — chosen over preset variants and per-run prompting: speed mid-conversation beats flexibility.) Governs R14.
 - **One line per day, capped at five.** (session-settled: user-directed — chosen over one line per block, collapsing identical runs, and longest-first selection: the message stays glanceable, and day granularity still reaches late in the window when early days are booked.) Governs R9, R10, R11.
+- **A day's line carries at most three blocks.** (session-settled: user-directed — chosen over printing every block and over skipping fragmented days entirely: a chopped-up day still belongs in the list, but its slivers are not worth a reader's attention.) Governs R9a.
 - **The line cap binds, not the horizon.** (session-settled: user-directed — chosen over returning fewer lines or an empty result when the week is full: five real days are always more useful than a short list, and any day past the last calendar event is fully open, so the search always terminates.) Governs R2a, R11.
 - **Annotation is a single pre-pass over events, never a call inside block finding.** (session-settled: user-approved — chosen over resolving buffers inline during the scan: keeps block finding pure, synchronous and snapshot-testable once inference lands.) Governs R17, R18, R23.
 - **The event model captures the full event record.** (session-settled: user-directed — chosen over times-and-location-only and a locally-computed in-person flag: privacy is not a constraint here, and full detail leaves the most headroom for later semantic features.) Governs R22.
@@ -81,6 +82,7 @@ Swift owns everything with a side effect: the EventKit read, any network the ann
 **Output format**
 
 - R9. Availability renders one line per day: the day's date prefix once, followed by all of that day's free blocks separated by commas.
+- R9a. At most three blocks appear on a day's line; when a day has more, the three longest are kept and rendered in chronological order.
 - R10. A day with no qualifying free block produces no line.
 - R11. Exactly five lines are emitted whenever the calendar permits, taken in chronological order, with any remainder inside the preferred window dropped and no truncation marker.
 - R12. Block times use the original compact form `h[:mm]am/pm`, with the start's am/pm suffix omitted when that block's start and end fall in the same half of the day.
@@ -147,6 +149,7 @@ Swift owns everything with a side effect: the EventKit read, any network the ann
 - AE5. **Covers R10, R11.** Given the first two days of the window are fully booked and the following six are open, when availability renders, then the first line is day 3 and exactly five lines are emitted, ending at day 7.
 - AE5a. **Covers R2a.** Given every day in the preferred window is fully booked and the five days after it are open, when availability renders, then five lines are emitted for those later days rather than an empty result.
 - AE5b. **Covers R2a.** Given only two days inside the preferred window qualify, when availability renders, then the search continues past the window until five qualifying days are found.
+- AE5c. **Covers R9a.** Given Wednesday has five qualifying free blocks, when the line renders, then only the three longest appear, in chronological order.
 - AE6. **Covers R3.** Given Wednesday has meetings leaving only a 45-minute gap and a 3-hour gap, when the line renders, then only the 3-hour block appears.
 - AE7. **Covers R6.** Given Thursday holds an all-day event and no timed events, when the line renders, then it reads as fully open for the whole 9am-7pm window.
 - AE8. **Covers R5.** Given Friday holds a 10am event on the `Supportive and Nourishing Structure` calendar and no other events, when the line renders, then it reads as fully open.
@@ -188,7 +191,6 @@ Swift owns everything with a side effect: the EventKit read, any network the ann
 **Deferred to Planning**
 
 - How the R25a shared store is implemented and when cache entries expire.
-- Whether the comma separator in R9 is the right glue for a day with three or more blocks.
 - How far forward the R2a search may run before it is treated as a fault rather than a genuine answer.
 
 ### Sources / Research
