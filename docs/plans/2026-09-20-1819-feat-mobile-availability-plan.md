@@ -12,9 +12,9 @@ execution: code
 
 ## Goal Capsule
 
-- **Objective:** From an iPhone, in one action and without typing, produce the owner's next open days as a short block of plain text and hand it to Messages.
-- **Means:** An iOS Shortcut invokes a Scriptable script that reads Apple Calendar on-device and calls a platform-independent JavaScript module for the availability rules and formatting.
-- **Product authority:** Single user, single device, personal use. No other users, no accounts, no published product. Inference-driven behavior is named here only as the seam it will plug into; both inference features are separate work.
+- **Objective:** From inside a Messages conversation, in two taps and without typing, drop the owner's next open days into the compose field as plain text.
+- **Means:** A native iOS app whose iMessage extension appears in the Messages `+` menu, reading Apple Calendar through EventKit and computing availability in Swift.
+- **Product authority:** Single user, single device, personal use. No other users, no accounts, no App Store distribution. Inference-driven behavior is named here only as the seam it will plug into; both inference features are separate work.
 - **Open blockers:** None.
 
 ---
@@ -23,42 +23,43 @@ execution: code
 
 ### Summary
 
-Rebuild `avail` as a phone-first tool: one tap on iOS renders the next five days that have open time as five lines of text and opens the Messages share sheet with it. The availability rules, block finding, and formatting live in a platform-independent JavaScript module; iOS is a thin adapter over it. A single annotation stage sits between reading the calendar and computing blocks, so later AI-driven buffer and all-day-event behavior drops in without touching anything downstream.
+Rebuild `avail` as a native iOS app. Its iMessage extension sits in the Messages `+` menu; tapping it inserts the next five days that have open time into the compose field, one line per day, in the original text format. Everything runs on-device in Swift. A single annotation stage sits between reading the calendar and computing blocks, so later AI-driven buffer and all-day-event behavior drops in without touching anything downstream.
 
 ### Problem Frame
 
-Sending someone your availability is a thirty-second interruption in the middle of a text conversation, and every existing path costs more than that. Opening the Calendar app and reading the week off the screen means transcribing times by hand and getting them wrong. Scheduling links move the work to the other person and read as bureaucratic between people who just want to pick a time. The original `avail` solved the formatting problem well — its compact one-line-per-block output is still the thing worth sending — but it only ran as a Node CLI fed a JSON dump from a Google Calendar OAuth server, so it was never reachable at the moment the question gets asked. The gap is not the computation. It is that the computation is nowhere near the phone.
+Sending someone your availability is a thirty-second interruption in the middle of a text conversation, and every existing path costs more than that. Opening the Calendar app and reading the week off the screen means transcribing times by hand and getting them wrong. Scheduling links move the work to the other person and read as bureaucratic between people who just want to pick a time. The original `avail` solved the formatting problem well — its compact output is still the thing worth sending — but it only ran as a Node CLI fed a JSON dump from a Google Calendar OAuth server, so it was never reachable at the moment the question gets asked. The gap is not the computation. It is that the computation is nowhere near the conversation.
 
 ### Key Decisions
 
-- **Generation runs on-device through Shortcuts and Scriptable.** (session-settled: user-directed — chosen over a hosted thin server and an iCloud CalDAV daemon: the deterministic list still generates with no signal, and only annotation ever needs the network.) Governs R16, R24, R25.
+- **A native iOS app with an iMessage extension.** (session-settled: user-directed — chosen over a Shortcuts-and-Scriptable path, and over shipping the Shortcut first with the extension later: the Messages `+` menu is populated only by iMessage app extensions, and that entry point is the point.) Governs R14, R15, R16.
+- **The whole implementation is Swift.** (session-settled: user-directed — chosen over running the existing JavaScript through JavaScriptCore, and over keeping the JS as a cross-check oracle: one language and full Xcode debugging beat reusing the old module.) Governs R24, R25.
 - **One fixed rule set, no invocation-time prompts.** (session-settled: user-directed — chosen over preset variants and per-run prompting: speed mid-conversation beats flexibility.) Governs R14.
 - **One line per day, capped at five.** (session-settled: user-directed — chosen over one line per block, collapsing identical runs, and longest-first selection: the message stays glanceable, and day granularity still reaches late in the window when early days are booked.) Governs R9, R10, R11.
 - **The line cap binds, not the horizon.** (session-settled: user-directed — chosen over returning fewer lines or an empty result when the week is full: five real days are always more useful than a short list, and any day past the last calendar event is fully open, so the search always terminates.) Governs R2a, R11.
-- **Native share to Messages, not the clipboard.** (session-settled: user-directed — chosen over copy-and-paste: fewer taps at the moment of use.) Governs R15.
 - **Annotation is a single pre-pass over events, never a call inside block finding.** (session-settled: user-approved — chosen over resolving buffers inline during the scan: keeps block finding pure, synchronous and snapshot-testable once inference lands.) Governs R17, R18, R23.
 - **The event model captures the full event record.** (session-settled: user-directed — chosen over times-and-location-only and a locally-computed in-person flag: privacy is not a constraint here, and full detail leaves the most headroom for later semantic features.) Governs R22.
 - **Both inference-dependent behaviors are deferred, and they share one seam.** (session-settled: user-directed — distance-based buffer durations and treating travel and conference all-day events as blocking are separate tasks; this work builds only what they plug into.) Governs R19, R20.
 - **The day window widened from the original, and weekends stayed in.** (session-settled: user-directed — chosen over the original's 9-to-5 and over weekdays-only: weekends are ordinary available days.) Governs R1.
-- **The existing Google OAuth server and stdin CLI are replaced rather than extended.** Only the block-finding logic and the output format carry forward; the repository's current shape is not a precedent.
+- **The repository is replaced, not extended.** The Google OAuth server, the stdin CLI, and the JavaScript implementation all go. The block-finding algorithm and the output format are the only things that survive, and they survive as a specification to reimplement rather than as code.
 
 ### Pipeline shape
 
 ```mermaid
 flowchart TB
-  A[iOS Shortcut] --> B[Calendar adapter]
-  B --> C[Normalized events<br/>full event record]
-  C --> D[Annotation stage<br/>one batched pass]
-  D --> E[Annotated events<br/>blocks, bufferBefore, bufferAfter]
-  E --> F[Block finder<br/>pure, synchronous]
-  F --> G[Day grouping and 5-line cap]
-  G --> H[Formatter]
-  H --> I[Messages share sheet]
-  D -.->|fails, times out,<br/>or no network| J[Deterministic rule set]
-  J --> E
+  A[Messages + menu] --> B[iMessage extension]
+  B --> C[EventKit read]
+  C --> D[Normalized events<br/>full event record]
+  D --> E[Annotation stage<br/>one batched pass]
+  E --> F[Annotated events<br/>blocks, bufferBefore, bufferAfter]
+  F --> G[Block finder<br/>pure, synchronous]
+  G --> H[Day grouping and 5-line cap]
+  H --> I[Formatter]
+  I --> J[Insert into compose field]
+  E -.->|fails, times out,<br/>or no network| K[Deterministic rule set]
+  K --> F
 ```
 
-The annotation stage is the only place inference will ever run. Everything downstream of it is a pure function of its output, which is what keeps the deterministic path testable after inference lands.
+Swift owns everything with a side effect: the EventKit read, any network the annotator later needs, and the insertion. The annotation stage is the only place inference will ever run, and everything downstream of it is a pure function of its output.
 
 ### Requirements
 
@@ -84,8 +85,9 @@ The annotation stage is the only place inference will ever run. Everything downs
 
 **Invocation and delivery**
 
-- R14. Generation is invoked from the iPhone in a single action, with no prompt for hours, horizon, or any other parameter.
-- R15. The generated text is handed to the native iOS share sheet targeting Messages.
+- R14. The iMessage extension appears in the Messages `+` menu and generates availability on a single tap, with no prompt for hours, horizon, or any other parameter.
+- R14a. When calendar access has not been granted, the extension reports the permission state rather than rendering an empty list.
+- R15. The generated text is inserted into the active conversation's compose field, leaving the owner to review, edit, and send.
 - R16. The deterministic result is produced entirely on-device and completes with no network connection.
 
 **Annotation seam**
@@ -98,29 +100,34 @@ The annotation stage is the only place inference will ever run. Everything downs
 - R22. The normalized event model captures the full event record: title, notes, location, conferencing URL, attendees, calendar, start, end, all-day flag, and response status.
 - R23. Free-block computation consumes only event times and the annotation stage's output, and is a pure synchronous function of them.
 
-**Portability**
+**Structure**
 
-- R24. The availability rules, block finding, and formatting live in a JavaScript module with no platform dependencies, runnable and testable under Node.
-- R25. The iOS integration is a thin adapter that reads events, calls the module, and returns text; replacing the adapter requires no change to the module.
+- R24. The availability rules, block finding, and formatting live in a Swift module that imports neither EventKit nor any UI framework, and is exercised directly by unit tests over fixture event lists.
+- R25. The iMessage extension and its containing app are shells over that module: the EventKit read, the compose-field insertion, and any future network call live outside it.
 
 ### Key Flows
 
-- F1. Generate and share availability
-  - **Trigger:** Owner invokes the shortcut from the phone mid-conversation.
-  - **Steps:** The adapter reads events across the horizon per R2 and normalizes them per R22; the annotation stage resolves blocking and buffers per R17; the block finder computes free blocks within the daily window; days are grouped and capped per R9 through R11; the formatter renders the text per R12 and R13; the share sheet opens targeting Messages.
-  - **Outcome:** At most five lines of availability text sit in a Messages draft.
+- F1. Generate and insert availability
+  - **Trigger:** Owner taps `+` in a Messages conversation and selects the extension.
+  - **Steps:** The extension reads events across the horizon per R2 and R2a and normalizes them per R22; the annotation stage resolves blocking and buffers per R17; the block finder computes free blocks within the daily window; days are grouped and capped per R9 through R11; the formatter renders the text per R12 and R13; the text is placed in the compose field.
+  - **Outcome:** Five lines of availability sit in the compose field, unsent.
   - **Covered by:** R1-R16, R22, R23.
 - F2. Annotation unavailable
   - **Trigger:** The annotator errors, exceeds its time budget, or the device has no network.
   - **Steps:** The deterministic rule set supplies annotations for every event; the rest of F1 proceeds unchanged.
   - **Outcome:** The owner gets the deterministic list with no error surfaced and no missing days.
   - **Covered by:** R19, R20.
+- F3. Calendar access not yet granted
+  - **Trigger:** The extension runs before EventKit permission has been granted.
+  - **Steps:** The extension surfaces the permission state rather than an empty result and directs the owner to grant access through the containing app.
+  - **Outcome:** The owner understands why no availability appeared and can fix it.
+  - **Covered by:** R14a.
 
 ### Acceptance Examples
 
-- AE1. **Covers R2.** Given today is Monday, when availability is generated, then the horizon spans 9 days so the window ends on Wednesday.
-- AE2. **Covers R2.** Given today is Tuesday, when availability is generated, then the horizon spans 8 days so the window ends on Wednesday.
-- AE3. **Covers R2.** Given today is Thursday, when availability is generated, then the horizon spans exactly 7 days.
+- AE1. **Covers R2.** Given today is Monday, when availability is generated, then the preferred window spans 9 days so it ends on Wednesday.
+- AE2. **Covers R2.** Given today is Tuesday, when availability is generated, then the preferred window spans 8 days so it ends on Wednesday.
+- AE3. **Covers R2.** Given today is Thursday, when availability is generated, then the preferred window spans exactly 7 days.
 - AE4. **Covers R9, R12.** Given Tuesday has a meeting from 2:30pm to 3:30pm and no other events, when the line renders, then it reads `Tue 7/11 9am-2:15pm, 3:45-7pm`.
 - AE5. **Covers R10, R11.** Given the first two days of the window are fully booked and the following six are open, when availability renders, then the first line is day 3 and exactly five lines are emitted, ending at day 7.
 - AE5a. **Covers R2a.** Given every day in the preferred window is fully booked and the five days after it are open, when availability renders, then five lines are emitted for those later days rather than an empty result.
@@ -130,47 +137,49 @@ The annotation stage is the only place inference will ever run. Everything downs
 - AE8. **Covers R5.** Given Friday holds a 10am event on the `Supportive and Nourishing Structure` calendar and no other events, when the line renders, then it reads as fully open.
 - AE9. **Covers R7.** Given Saturday holds one declined invitation and one tentatively accepted event, when the line renders, then only the tentative event removes time.
 - AE10. **Covers R4.** Given it is 2:10pm today, when availability is generated, then today's first block starts at 2:30pm.
-- AE11. **Covers R20.** Given the annotator throws on every event, when availability is generated, then the output is identical to a run with the deterministic rule set and no error reaches the share sheet.
+- AE11. **Covers R20.** Given the annotator throws on every event, when availability is generated, then the output is identical to a run with the deterministic rule set and no error reaches the compose field.
+- AE12. **Covers R15.** Given availability generates successfully, when the extension finishes, then the text sits in the compose field unsent and the owner can edit it before sending.
 
 ### Success Criteria
 
-- Tap to populated share sheet completes in a few seconds in airplane mode.
-- The module's behavior is pinned by tests that run under Node with no iOS involvement, using fixture event lists.
-- Introducing the distance-based buffer annotator later requires changes only inside the annotation stage — not in block finding, day grouping, formatting, or the adapter.
-- Replacing the iOS adapter with a different host requires no change to the module.
+- Tap to populated compose field completes in a few seconds in airplane mode.
+- The R24 module's behavior is pinned by unit tests over fixture event lists, with no simulator UI and no calendar access required to run them.
+- Introducing the distance-based buffer annotator later requires changes only inside the annotation stage — not in block finding, day grouping, formatting, or the extension.
+- The extension stays within the memory budget iOS allows a Messages extension across a full nine-day window.
 
 ### Scope Boundaries
 
 - Distance-based buffer durations, and the carve-out that makes travel and conference all-day events blocking, are both separate work. This plan builds the seam and the deterministic annotator only.
 - Semantic or fuzzy qualifiers ("mornings only", "after my trip") are out. Generation is fully deterministic.
-- Email injection is out, though R24 and R25 keep it cheap later.
+- Email injection is out. An iMessage extension lives only in Messages, so that case needs a different surface — the containing app or a share extension — and is not designed here.
+- Shortcuts, Scriptable, and any share-sheet entry point are out.
 - Any server, daemon, hosted endpoint, or CalDAV path is out.
-- Multi-user support, accounts, authentication, publishing, and anything intended for other people's use are out.
-- The existing Express OAuth server, Google Calendar integration, and stdin CLI are removed rather than migrated.
+- App Store distribution, multi-user support, accounts, and authentication are out.
+- The existing Express OAuth server, Google Calendar integration, stdin CLI, and JavaScript implementation are all removed.
 
 ### Dependencies / Assumptions
 
-- Scriptable is installed on the device and granted calendar access, and the Shortcuts app can invoke it and receive its text output.
-- Scriptable is maintained by a single developer and has historically lagged new iOS releases by a couple of months. R24 and R25 exist to bound that risk: the module survives an adapter swap.
-- The script is authored on a Mac and reaches the device through iCloud Drive; the phone is not an editing surface.
-- All of the owner's calendars are reachable from Apple Calendar on the device.
+- A paid Apple Developer Program membership is a liveness dependency, not a one-time cost: if it lapses the app stops launching on the device. Free provisioning expires every seven days and is not a viable fallback.
+- Xcode and a Mac are required to build and sign; the phone is not an authoring surface.
+- iOS provides no way to send a message programmatically from a Messages extension, so R15 stops at insertion by platform constraint rather than by choice.
+- EventKit permission is requested by the containing app; the extension inherits it and cannot prompt for it usefully on its own.
+- The containing app exists mainly to hold the extension, carry configuration, and own the permission prompt.
 - The buffer in R8 is symmetric and uniform today only because the deterministic annotator makes it so; nothing downstream assumes symmetry.
 
 ### Outstanding Questions
 
 **Deferred to Planning**
 
-- Which invocation surface the shortcut uses — home screen icon, share sheet, Back Tap, or several.
-- Where configuration lives and its shape, given it must be editable without a Mac round-trip.
-- How the R21 cache persists on-device and when entries expire.
+- Where configuration lives and its shape, given the exclusion list in R5 should be editable without an Xcode round-trip.
+- How the R21 cache persists and is shared between the extension and the containing app, and when entries expire.
 - Whether the comma separator in R9 is the right glue for a day with three or more blocks.
 - How far forward the R2a search may run before it is treated as a fault rather than a genuine answer.
+- Whether the containing app needs any UI beyond the permission prompt and configuration.
 
 ### Sources / Research
 
-- `find-free-blocks.js` — the recursive free-block finder and the formatter carried forward, including the per-block am/pm elision in `formatBlockStart` and the original defaults (9am-5pm, all seven days, 1-hour minimum, 7-day span). Dependency-free; the basis for R24.
-- `index.js` — the Express, Passport, and Google Calendar OAuth server being removed.
-- `bin.js` — the stdin/file JSON CLI being removed.
-- `test/spec.js` — existing mocha and chai coverage of `flattenEvents` and `printFreeBlocks`, and the fixture shape tests can build on.
-- [Scriptable](https://scriptable.app/) and its [Script API](https://docs.scriptable.app/script/) — `Script.setShortcutOutput()` returns text from a script to a calling shortcut, which is the mechanism R25 depends on.
-- [Intro to Find and Filter actions in Shortcuts](https://support.apple.com/guide/shortcuts/intro-to-find-and-filter-actions-apd3c845e881/ios) and [Shortcuts Rewind: Dates, Calendars, and Beyond](https://www.macstories.net/stories/shortcuts-rewind-dates-calendars-and-beyond/) — confirm native on-device calendar reads with per-calendar and date-range filtering, establishing that no server is required.
+- `find-free-blocks.js` — the recursive free-block algorithm and the formatter to reimplement in Swift, including the per-block am/pm elision in `formatBlockStart` and the original defaults (9am-5pm, all seven days, 1-hour minimum, 7-day span). Specification, not carried code.
+- `test/events.json` and `test/spec.js` — existing fixtures and expected outputs that port directly into the Swift test suite.
+- `index.js` and `bin.js` — the Express/Passport OAuth server and the stdin CLI being removed.
+- [Use iMessage apps on your iPhone and iPad](https://support.apple.com/en-us/104969) and [Intro to Message app extensions](https://learn.microsoft.com/en-ca/previous-versions/xamarin/ios/platform/message-app-integration/intro-to-message-app-extensions) — establish that the `+` menu is populated exclusively by iMessage app extensions, which is why a native app is required.
+- [Building an interactive iMessage application](https://medium.com/@bartkozal/building-an-interactive-imessage-application-for-ios-10-in-swift-7da4a18bdeed) — an extension can insert a message into the conversation, but the owner must confirm the send; there is no programmatic send.
