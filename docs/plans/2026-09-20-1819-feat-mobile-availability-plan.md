@@ -70,7 +70,7 @@ Swift owns everything with a side effect: the EventKit read, any network the ann
 **Availability rules**
 
 - R1. Free time is computed within a daily window of 9:00am to 7:00pm local time, on every day of the week including weekends.
-- R2. The preferred window is the next 7 days from the moment of invocation, extended to 8 or 9 days when day 7 would fall on a Monday or Tuesday, so the preferred window never ends on either of those days.
+- R2. The preferred window begins with today as day 0, starting at R4's rounded-up time, and runs through the end of day 7, extended through the end of day 8 or day 9 when day 7 falls on a Monday or Tuesday, so the preferred window never ends on either of those days.
 - R2a. The preferred window is not a ceiling: when it holds fewer than five qualifying days, the search continues day by day past it until five qualifying days are found.
 - R3. A free block shorter than one hour is not offered.
 - R4. Today's availability begins at the current time rounded up to the next half hour.
@@ -82,42 +82,43 @@ Swift owns everything with a side effect: the EventKit read, any network the ann
 
 **Output format**
 
-- R9. Availability renders one line per day: the day's date prefix once, followed by all of that day's free blocks separated by commas.
+- R9. Availability renders one line per day: the day's date prefix once, followed by that day's free blocks separated by commas, subject to the per-day limit in R9a.
 - R9a. At most three blocks appear on a day's line; when a day has more, the three longest are kept and rendered in chronological order.
 - R10. A day with no qualifying free block produces no line.
 - R11. Exactly five lines are emitted whenever the calendar permits, taken in chronological order, with any remainder inside the preferred window dropped and no truncation marker.
 - R12. Block times use the original compact form `h[:mm]am/pm`, with the start's am/pm suffix omitted when that block's start and end fall in the same half of the day.
 - R13. Times render in the device's local timezone, with no timezone label by default.
-- R13a. The extension offers a toggle that appends the local timezone's abbreviation to the end of every line; it is off by default and retains its last state between invocations.
+- R13a. The extension offers a toggle that appends the local timezone's generic short name — the season-independent `ET` form, not `EDT` or `EST` — to the end of every line; it is off by default and retains its last state between invocations.
 
 **Invocation and delivery**
 
 - R14. The iMessage extension appears in the Messages `+` menu and generates availability on a single tap, with no prompt for hours, horizon, or any other parameter.
-- R14a. When calendar access has not been granted, the extension reports the permission state rather than rendering an empty list.
+- R14a. When calendar access is absent, denied, or write-only, the extension reports the permission state rather than rendering availability.
 - R15. The generated text is inserted into the active conversation's compose field, leaving the owner to review, edit, and send.
 - R16. The deterministic result is produced entirely on-device and completes with no network connection.
+- R16a. The extension shows an indeterminate progress indicator from the moment it is tapped until the rendered lines replace it, so its view is never blank.
 
 **Annotation seam**
 
 - R17. A single annotation stage runs after events are read and before free-block computation, returning for each event whether it blocks and its before and after buffer durations.
 - R18. The annotation stage resolves every event in the window in one batched pass, not one call per event.
-- R19. The shipped annotator is a deterministic rule set implementing R6, R7 and R8, and is replaceable without changes downstream of it.
+- R19. The shipped annotator is a deterministic rule set implementing R6, R7, R7a and R8, and is replaceable without changes downstream of it; a replacement preserves those rules except where the deferred all-day carve-out changes R6.
 - R20. When an annotator errors, times out, or has no network, the deterministic rule set supplies the annotation and generation completes normally.
-- R21. Annotation results derived from a stable external fact are cached across invocations, keyed on the inputs that determine them.
-- R22. The normalized event model captures the full event record: title, notes, location, conferencing URL, attendees, calendar, start, end, all-day flag, and response status.
+- R22. The normalized event model captures the full event record: title, notes, location, attendees, calendar, start, end, all-day flag, and response status, plus a conferencing URL derived from the event's url, location and notes, since EventKit exposes no conference property of its own.
 - R23. Free-block computation consumes only event times and the annotation stage's output, and is a pure synchronous function of them.
 
 **Containing app**
 
-- R26. The containing app lists the device's calendars and lets the owner mark each as blocking or excluded, and the extension reads that selection.
+- R26. The containing app lists the device's calendars and lets the owner mark each as blocking or excluded, and the extension reads that selection. The selection is keyed on each calendar's stable EventKit identifier so a rename does not change its state; R5's named exclusion is matched by name once at first run.
 - R27. The containing app displays the exact text the extension would produce at that moment.
+- R27a. The containing app requests calendar access when its calendar screen first appears and, until full access is granted, shows an explicit prompt to grant it in place of the calendar list.
 - R28. The daily window, the line cap, the minimum block, and the buffer durations are build-time constants, not editable on-device.
 
 **Structure**
 
 - R24. The availability rules, block finding, and formatting live in a Swift module that imports neither EventKit nor any UI framework, and is exercised directly by unit tests over fixture event lists.
 - R25. The iMessage extension and its containing app are shells over that module: the EventKit read, the compose-field insertion, and any future network call live outside it.
-- R25a. The calendar selection from R26, the timezone toggle state from R13a, and the annotation cache from R21 are shared between the containing app and the extension.
+- R25a. The calendar selection from R26 and the timezone toggle state from R13a are shared between the containing app and the extension.
 
 ### Key Flows
 
@@ -125,7 +126,7 @@ Swift owns everything with a side effect: the EventKit read, any network the ann
   - **Trigger:** Owner taps `+` in a Messages conversation and selects the extension.
   - **Steps:** The extension reads events across the horizon per R2 and R2a and normalizes them per R22; the annotation stage resolves blocking and buffers per R17; the block finder computes free blocks within the daily window; days are grouped and capped per R9 through R11; the formatter renders the text per R12, R13 and R13a; the extension displays the text alongside the timezone toggle; the owner taps to insert it.
   - **Outcome:** Five lines of availability sit in the compose field, unsent.
-  - **Covered by:** R1-R16, R22, R23.
+  - **Covered by:** R1-R17, R22, R23.
 - F2. Annotation unavailable
   - **Trigger:** The annotator errors, exceeds its time budget, or the device has no network.
   - **Steps:** The deterministic rule set supplies annotations for every event; the rest of F1 proceeds unchanged.
@@ -137,9 +138,9 @@ Swift owns everything with a side effect: the EventKit read, any network the ann
   - **Outcome:** The selection is stored where the extension reads it, and the preview shows what the next invocation will produce.
   - **Covered by:** R5, R25a, R26, R27.
 - F4. Calendar access not yet granted
-  - **Trigger:** The extension runs before EventKit permission has been granted.
-  - **Steps:** The extension surfaces the permission state rather than an empty result and directs the owner to grant access through the containing app.
-  - **Outcome:** The owner understands why no availability appeared and can fix it.
+  - **Trigger:** The extension runs without full calendar access, whether the grant is absent, denied, or write-only.
+  - **Steps:** The extension surfaces which of those states applies rather than an empty result, and names the remedy: granting through the containing app for an absent grant, or switching Calendars to Full Access in Settings for a write-only one.
+  - **Outcome:** The owner understands why no availability appeared and can fix it, and never sends a falsely wide-open week.
   - **Covered by:** R14a.
 
 ### Acceptance Examples
@@ -159,7 +160,7 @@ Swift owns everything with a side effect: the EventKit read, any network the ann
 - AE10. **Covers R4.** Given it is 2:10pm today, when availability is generated, then today's first block starts at 2:30pm.
 - AE11. **Covers R20.** Given the annotator throws on every event, when availability is generated, then the output is identical to a run with the deterministic rule set and no error reaches the compose field.
 - AE12. **Covers R15.** Given availability generates successfully, when the extension finishes, then the text sits in the compose field unsent and the owner can edit it before sending.
-- AE12c. **Covers R13a.** Given the timezone toggle is on in a device set to Eastern time, when the lines render, then each ends with the zone abbreviation, as in `Tue 7/11 9am-2:15pm, 3:45-7pm ET`.
+- AE12c. **Covers R13a.** Given the timezone toggle is on in a device set to Eastern time, when the lines render, then each ends with the generic short name, as in `Tue 7/11 9am-2:15pm, 3:45-7pm ET`.
 - AE13. **Covers R7a.** Given Monday holds a two-hour event whose Show As reads Free, when the line renders, then it reads as fully open.
 - AE14. **Covers R26, R27.** Given the owner excludes a calendar in the containing app, when the preview refreshes, then blocks previously removed by that calendar's events appear, and the extension's next run matches the preview.
 
@@ -172,7 +173,7 @@ Swift owns everything with a side effect: the EventKit read, any network the ann
 
 ### Scope Boundaries
 
-- Distance-based buffer durations, and the carve-out that makes travel and conference all-day events blocking, are both separate work. This plan builds the seam and the deterministic annotator only.
+- Distance-based buffer durations, and the carve-out that makes travel and conference all-day events blocking, are both separate work. This plan builds the seam and the deterministic annotator only. Caching annotation results arrives with the annotator that needs it, behind the R17 interface.
 - Semantic or fuzzy qualifiers ("mornings only", "after my trip") are out. Generation is fully deterministic.
 - Email injection is out. An iMessage extension lives only in Messages, so that case needs a different surface — the containing app or a share extension — and is not designed here.
 - Shortcuts, Scriptable, and any share-sheet entry point are out.
@@ -193,13 +194,13 @@ Swift owns everything with a side effect: the EventKit read, any network the ann
 
 **Deferred to Planning**
 
-- How the R25a shared store is implemented and when cache entries expire.
+- How the R25a shared store between the containing app and the extension is implemented.
 - How far forward the R2a search may run before it is treated as a fault rather than a genuine answer.
 
 ### Sources / Research
 
 - `find-free-blocks.js` — the recursive free-block algorithm and the formatter to reimplement in Swift, including the per-block am/pm elision in `formatBlockStart` and the original defaults (9am-5pm, all seven days, 1-hour minimum, 7-day span). Specification, not carried code.
-- `test/events.json` and `test/spec.js` — existing fixtures and expected outputs that port directly into the Swift test suite.
+- `test/events.json` and `test/spec.js` — the event fixtures port directly as Swift test inputs, but every expected output string must be recomputed: the existing assertions were produced under a 9am-5pm day with no buffers, one line per block, and no line cap, all four of which R1, R8, R9 and R11 change.
 - `index.js` and `bin.js` — the Express/Passport OAuth server and the stdin CLI being removed.
 - [Use iMessage apps on your iPhone and iPad](https://support.apple.com/en-us/104969) and [Intro to Message app extensions](https://learn.microsoft.com/en-ca/previous-versions/xamarin/ios/platform/message-app-integration/intro-to-message-app-extensions) — establish that the `+` menu is populated exclusively by iMessage app extensions, which is why a native app is required.
 - [Building an interactive iMessage application](https://medium.com/@bartkozal/building-an-interactive-imessage-application-for-ios-10-in-swift-7da4a18bdeed) — an extension can insert a message into the conversation, but the owner must confirm the send; there is no programmatic send.
