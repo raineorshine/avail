@@ -1,3 +1,5 @@
+process.env.TZ = 'Etc/GMT+6'
+
 const chai = require('chai')
 const { flattenEvents, printFreeBlocks } = require('../find-free-blocks.js')
 const should = chai.should()

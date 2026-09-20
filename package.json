@@ -10,7 +10,7 @@
     "url": "https://github.com/raineorshine"
   },
   "engines": {
-    "node": ">=0.12.0"
+    "node": ">=18"
   },
   "bin": {
     "avail": "bin.js"
