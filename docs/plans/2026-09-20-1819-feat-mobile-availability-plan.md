@@ -191,6 +191,10 @@ Swift owns everything with a side effect: the EventKit read, any network the ann
 - EventKit permission is requested by the containing app; the extension inherits it and cannot prompt for it usefully on its own.
 - The containing app holds the extension, owns the permission prompt, and carries the calendar selection and preview described in R26 and R27.
 - The buffer in R8 is symmetric and uniform today only because the deterministic annotator makes it so; nothing downstream assumes symmetry.
+- Whether the calendar grant is recorded against the containing app's bundle identifier or the extension's is unverified. If it is the extension's, F4's remedy path leaves the extension permanently unauthorized and F1 cannot complete at all, so this is worth confirming on a device before the extension shell is built.
+- R7's response-status rule depends on reading the owner's own participation, which EventKit surfaces only through an event's attendee list. Attendee lists are not populated uniformly across account types and are often absent for events the owner organized, so the rule may hold on iCloud events and silently not apply to others.
+- R7a's Show As rule depends on a field that subscribed and ICS calendars do not carry; on those calendars the rule has no effect.
+- The original algorithm advances days by adding a fixed 24 hours of milliseconds. A Swift reimplementation must derive each day's 9am and 7pm from calendar components instead, or the window drifts by an hour across a daylight-saving transition inside the horizon.
 - R2's Monday and Tuesday extension changes how much calendar the first pass reads, not which days appear. Because R2a reaches past the preferred window whenever fewer than five days qualify, the days shown are the first five with a qualifying block either way. The extension is retained as specified; no acceptance example asserts an output difference from it because none exists.
 
 ### Outstanding Questions
