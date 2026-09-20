@@ -1,3 +1,7 @@
+// Pin the timezone before anything reads the clock. The fixtures below carry -06:00 offsets and
+// the expected output is rendered in local time, so without this the suite passes only on a machine
+// set to -06:00 and fails by an hour or two everywhere else. Etc/GMT+6 is a fixed -06:00 with no
+// DST, so the expectations hold whatever date the tests run on.
 process.env.TZ = 'Etc/GMT+6'
 
 const chai = require('chai')
