@@ -71,7 +71,8 @@ Swift owns everything with a side effect: the EventKit read, any network the ann
 
 - R1. Free time is computed within a daily window of 9:00am to 7:00pm local time, on every day of the week including weekends.
 - R2. The preferred window begins with today as day 0, starting at R4's rounded-up time, and runs through the end of day 7, extended through the end of day 8 or day 9 when day 7 falls on a Monday or Tuesday, so the preferred window never ends on either of those days.
-- R2a. The preferred window is not a ceiling: when it holds fewer than five qualifying days, the search continues day by day past it until five qualifying days are found.
+- R2a. The preferred window is not a ceiling. Events are read and annotated for the preferred window in a single pass; when fewer than five days qualify within it, one further pass reads and annotates the following 30 days and the search continues into them.
+- R2b. When fewer than five days qualify across both passes, every qualifying day is emitted and no further pass runs.
 - R3. A free block shorter than one hour is not offered.
 - R4. Today's availability begins at the current time rounded up to the next half hour.
 - R5. Every calendar blocks availability except those the owner has excluded in the containing app; `Supportive and Nourishing Structure` is excluded at first run.
@@ -85,7 +86,7 @@ Swift owns everything with a side effect: the EventKit read, any network the ann
 - R9. Availability renders one line per day: the day's date prefix once, followed by that day's free blocks separated by commas, subject to the per-day limit in R9a.
 - R9a. At most three blocks appear on a day's line; when a day has more, the three longest are kept and rendered in chronological order.
 - R10. A day with no qualifying free block produces no line.
-- R11. Exactly five lines are emitted whenever the calendar permits, taken in chronological order, with any remainder inside the preferred window dropped and no truncation marker.
+- R11. Five lines are emitted whenever R2a's two passes supply five qualifying days, taken in chronological order, with any remainder dropped and no truncation marker.
 - R12. Block times use the original compact form `h[:mm]am/pm`, with the start's am/pm suffix omitted when that block's start and end fall in the same half of the day.
 - R13. Times render in the device's local timezone, with no timezone label by default.
 - R13a. The extension offers a toggle that appends the local timezone's generic short name — the season-independent `ET` form, not `EDT` or `EST` — to the end of every line; it is off by default and retains its last state between invocations.
@@ -151,7 +152,8 @@ Swift owns everything with a side effect: the EventKit read, any network the ann
 - AE4. **Covers R9, R12.** Given Tuesday has a meeting from 2:30pm to 3:30pm and no other events, when the line renders, then it reads `Tue 7/11 9am-2:15pm, 3:45-7pm`.
 - AE5. **Covers R10, R11.** Given the first two days of the window are fully booked and the following six are open, when availability renders, then the first line is day 3 and exactly five lines are emitted, ending at day 7.
 - AE5a. **Covers R2a.** Given every day in the preferred window is fully booked and the five days after it are open, when availability renders, then five lines are emitted for those later days rather than an empty result.
-- AE5b. **Covers R2a.** Given only two days inside the preferred window qualify, when availability renders, then the search continues past the window until five qualifying days are found.
+- AE5b. **Covers R2a.** Given only two days inside the preferred window qualify, when availability renders, then a second pass reads the following 30 days and the search continues into them until five qualifying days are found.
+- AE5d. **Covers R2b.** Given fewer than five days qualify across the preferred window and the 30-day second pass, when availability renders, then only the qualifying days are emitted and no third pass runs.
 - AE5c. **Covers R9a.** Given Wednesday has five qualifying free blocks, when the line renders, then only the three longest appear, in chronological order.
 - AE6. **Covers R3.** Given Wednesday has meetings leaving only a 45-minute gap and a 3-hour gap, when the line renders, then only the 3-hour block appears.
 - AE7. **Covers R6.** Given Thursday holds an all-day event and no timed events, when the line renders, then it reads as fully open for the whole 9am-7pm window.
@@ -169,7 +171,7 @@ Swift owns everything with a side effect: the EventKit read, any network the ann
 - Tap to populated compose field completes in a few seconds in airplane mode.
 - The R24 module's behavior is pinned by unit tests over fixture event lists, with no simulator UI and no calendar access required to run them.
 - Introducing the distance-based buffer annotator later requires changes only inside the annotation stage — not in block finding, day grouping, formatting, or the extension.
-- The extension stays within the memory budget iOS allows a Messages extension across a full nine-day window.
+- The extension stays within the memory budget iOS allows a Messages extension across R2a's worst case: a preferred window of nine days plus the 30-day second pass, on a calendar dense enough to need both.
 
 ### Scope Boundaries
 
@@ -189,13 +191,13 @@ Swift owns everything with a side effect: the EventKit read, any network the ann
 - EventKit permission is requested by the containing app; the extension inherits it and cannot prompt for it usefully on its own.
 - The containing app holds the extension, owns the permission prompt, and carries the calendar selection and preview described in R26 and R27.
 - The buffer in R8 is symmetric and uniform today only because the deterministic annotator makes it so; nothing downstream assumes symmetry.
+- R2's Monday and Tuesday extension changes how much calendar the first pass reads, not which days appear. Because R2a reaches past the preferred window whenever fewer than five days qualify, the days shown are the first five with a qualifying block either way. The extension is retained as specified; no acceptance example asserts an output difference from it because none exists.
 
 ### Outstanding Questions
 
 **Deferred to Planning**
 
 - How the R25a shared store between the containing app and the extension is implemented.
-- How far forward the R2a search may run before it is treated as a fault rather than a genuine answer.
 
 ### Sources / Research
 
