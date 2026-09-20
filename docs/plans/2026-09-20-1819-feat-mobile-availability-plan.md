@@ -84,7 +84,7 @@ Swift owns everything with a side effect: the EventKit read, any network the ann
 **Output format**
 
 - R9. Availability renders one line per day: the day's date prefix once, followed by that day's free blocks separated by commas, subject to the per-day limit in R9a.
-- R9a. At most three blocks appear on a day's line; when a day has more, the three longest are kept and rendered in chronological order.
+- R9a. At most three blocks appear on a day's line; when a day has more, the three longest are kept and rendered in chronological order, with ties in length broken by the earlier start.
 - R10. A day with no qualifying free block produces no line.
 - R11. Five lines are emitted whenever R2a's two passes supply five qualifying days, taken in chronological order, with any remainder dropped and no truncation marker.
 - R12. Block times use the original compact form `h[:mm]am/pm`, with the start's am/pm suffix omitted when that block's start and end fall in the same half of the day.
@@ -111,7 +111,7 @@ Swift owns everything with a side effect: the EventKit read, any network the ann
 **Containing app**
 
 - R26. The containing app lists the device's calendars and lets the owner mark each as blocking or excluded, and the extension reads that selection. The selection is keyed on each calendar's stable EventKit identifier so a rename does not change its state; R5's named exclusion is matched by name once at first run.
-- R27. The containing app displays the exact text the extension would produce at that moment.
+- R27. The containing app displays the exact text the extension would produce at that moment, and copies it to the pasteboard in one tap.
 - R27a. The containing app requests calendar access when its calendar screen first appears and, until full access is granted, shows an explicit prompt to grant it in place of the calendar list.
 - R28. The daily window, the line cap, the minimum block, and the buffer durations are build-time constants, not editable on-device.
 
@@ -154,7 +154,7 @@ Swift owns everything with a side effect: the EventKit read, any network the ann
 - AE5a. **Covers R2a.** Given every day in the preferred window is fully booked and the five days after it are open, when availability renders, then five lines are emitted for those later days rather than an empty result.
 - AE5b. **Covers R2a.** Given only two days inside the preferred window qualify, when availability renders, then a second pass reads the following 30 days and the search continues into them until five qualifying days are found.
 - AE5d. **Covers R2b.** Given fewer than five days qualify across the preferred window and the 30-day second pass, when availability renders, then only the qualifying days are emitted and no third pass runs.
-- AE5c. **Covers R9a.** Given Wednesday has five qualifying free blocks, when the line renders, then only the three longest appear, in chronological order.
+- AE5c. **Covers R9a.** Given Wednesday has five qualifying free blocks, two of them the same length, when the line renders, then only the three longest appear in chronological order, the earlier of the tied pair winning.
 - AE6. **Covers R3.** Given Wednesday has meetings leaving only a 45-minute gap and a 3-hour gap, when the line renders, then only the 3-hour block appears.
 - AE7. **Covers R6.** Given Thursday holds an all-day event and no timed events, when the line renders, then it reads as fully open for the whole 9am-7pm window.
 - AE8. **Covers R5.** Given Friday holds a 10am event on the `Supportive and Nourishing Structure` calendar and no other events, when the line renders, then it reads as fully open.
@@ -177,7 +177,7 @@ Swift owns everything with a side effect: the EventKit read, any network the ann
 
 - Distance-based buffer durations, and the carve-out that makes travel and conference all-day events blocking, are both separate work. This plan builds the seam and the deterministic annotator only. Caching annotation results arrives with the annotator that needs it, behind the R17 interface.
 - Semantic or fuzzy qualifiers ("mornings only", "after my trip") are out. Generation is fully deterministic.
-- Email injection is out. An iMessage extension lives only in Messages, so that case needs a different surface — the containing app or a share extension — and is not designed here.
+- Email injection is out as a designed surface. An iMessage extension lives only in Messages; R27's one-tap copy is the interim path for email, Slack, and anywhere else.
 - Shortcuts, Scriptable, and any share-sheet entry point are out.
 - Any server, daemon, hosted endpoint, or CalDAV path is out.
 - App Store distribution, multi-user support, accounts, and authentication are out.
