@@ -1,0 +1,5 @@
+# Compound Engineering configuration for avail.
+
+# Never send document or code content to another model's CLI for a
+# cross-model judgment pass. Covers ce-doc-review and ce-code-review.
+cross_model_review_mode: off
