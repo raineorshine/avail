@@ -42,6 +42,7 @@ Sending someone your availability is a thirty-second interruption in the middle 
 - **Both inference-dependent behaviors are deferred, and they share one seam.** (session-settled: user-directed — distance-based buffer durations and treating travel and conference all-day events as blocking are separate tasks; this work builds only what they plug into.) Governs R19, R20.
 - **The day window widened from the original, and weekends stayed in.** (session-settled: user-directed — chosen over the original's 9-to-5 and over weekdays-only: weekends are ordinary available days.) Governs R1.
 - **The containing app carries the calendar selection and a live preview.** (session-settled: user-directed — chosen over a permission-prompt-only shell, a full settings screen, and preview-only: calendars come and go while hours never change, and the preview verifies a rule change without texting yourself.) Governs R26, R27, R28.
+- **The timezone label is a toggle in the extension's own view, not a prompt or a global setting.** (session-settled: user-directed — chosen over a switch in the containing app and over always appending it: the zone matters per recipient, and the extension already renders a view, so a toggle costs a tap only when it is wanted.) Governs R13a.
 - **A calendar's own Show As field is honored.** (session-settled: user-directed — chosen over blocking everything that has a time on it, and over honoring it only on events the owner created: it is a per-event override that needs no new configuration.) Governs R7a.
 - **The repository is replaced, not extended.** The Google OAuth server, the stdin CLI, and the JavaScript implementation all go. The block-finding algorithm and the output format are the only things that survive, and they survive as a specification to reimplement rather than as code.
 
@@ -86,7 +87,8 @@ Swift owns everything with a side effect: the EventKit read, any network the ann
 - R10. A day with no qualifying free block produces no line.
 - R11. Exactly five lines are emitted whenever the calendar permits, taken in chronological order, with any remainder inside the preferred window dropped and no truncation marker.
 - R12. Block times use the original compact form `h[:mm]am/pm`, with the start's am/pm suffix omitted when that block's start and end fall in the same half of the day.
-- R13. Times render in the device's local timezone with no timezone label.
+- R13. Times render in the device's local timezone, with no timezone label by default.
+- R13a. The extension offers a toggle that appends the local timezone's abbreviation to the end of every line; it is off by default and retains its last state between invocations.
 
 **Invocation and delivery**
 
@@ -115,13 +117,13 @@ Swift owns everything with a side effect: the EventKit read, any network the ann
 
 - R24. The availability rules, block finding, and formatting live in a Swift module that imports neither EventKit nor any UI framework, and is exercised directly by unit tests over fixture event lists.
 - R25. The iMessage extension and its containing app are shells over that module: the EventKit read, the compose-field insertion, and any future network call live outside it.
-- R25a. The calendar selection from R26 and the annotation cache from R21 are shared between the containing app and the extension.
+- R25a. The calendar selection from R26, the timezone toggle state from R13a, and the annotation cache from R21 are shared between the containing app and the extension.
 
 ### Key Flows
 
 - F1. Generate and insert availability
   - **Trigger:** Owner taps `+` in a Messages conversation and selects the extension.
-  - **Steps:** The extension reads events across the horizon per R2 and R2a and normalizes them per R22; the annotation stage resolves blocking and buffers per R17; the block finder computes free blocks within the daily window; days are grouped and capped per R9 through R11; the formatter renders the text per R12 and R13; the text is placed in the compose field.
+  - **Steps:** The extension reads events across the horizon per R2 and R2a and normalizes them per R22; the annotation stage resolves blocking and buffers per R17; the block finder computes free blocks within the daily window; days are grouped and capped per R9 through R11; the formatter renders the text per R12, R13 and R13a; the extension displays the text alongside the timezone toggle; the owner taps to insert it.
   - **Outcome:** Five lines of availability sit in the compose field, unsent.
   - **Covered by:** R1-R16, R22, R23.
 - F2. Annotation unavailable
@@ -157,6 +159,7 @@ Swift owns everything with a side effect: the EventKit read, any network the ann
 - AE10. **Covers R4.** Given it is 2:10pm today, when availability is generated, then today's first block starts at 2:30pm.
 - AE11. **Covers R20.** Given the annotator throws on every event, when availability is generated, then the output is identical to a run with the deterministic rule set and no error reaches the compose field.
 - AE12. **Covers R15.** Given availability generates successfully, when the extension finishes, then the text sits in the compose field unsent and the owner can edit it before sending.
+- AE12c. **Covers R13a.** Given the timezone toggle is on in a device set to Eastern time, when the lines render, then each ends with the zone abbreviation, as in `Tue 7/11 9am-2:15pm, 3:45-7pm ET`.
 - AE13. **Covers R7a.** Given Monday holds a two-hour event whose Show As reads Free, when the line renders, then it reads as fully open.
 - AE14. **Covers R26, R27.** Given the owner excludes a calendar in the containing app, when the preview refreshes, then blocks previously removed by that calendar's events appear, and the extension's next run matches the preview.
 
