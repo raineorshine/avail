@@ -19,13 +19,20 @@ final class MessagesViewController: MSMessagesAppViewController {
     case rendered(Availability)
     case noOpenTime
     case accessRequired(CalendarAccessState)
+    case inserting
     case inserted
     case insertionFailed
+    case settingsUnavailable
   }
 
   private let service = AvailabilityService()
   private var conversation: MSConversation?
   private var state: State = .working { didSet { render() } }
+  /// Bumped by every run. A completion that belongs to a superseded one is
+  /// dropped rather than allowed to overwrite what is on screen: the
+  /// extension is reactivated and the toggle flipped on the owner's schedule,
+  /// not on the store's.
+  private var generation = 0
 
   private let textView = UITextView()
   private let spinner = UIActivityIndicatorView(style: .medium)
@@ -41,8 +48,6 @@ final class MessagesViewController: MSMessagesAppViewController {
   override func willBecomeActive(with conversation: MSConversation) {
     super.willBecomeActive(with: conversation)
     self.conversation = conversation
-    // R13a. The toggle keeps its last state between invocations.
-    timeZoneSwitch.isOn = service.settings().appendsTimeZoneLabel
     generate()
   }
 
@@ -50,12 +55,26 @@ final class MessagesViewController: MSMessagesAppViewController {
 
   /// R16a. The indicator shows from the moment the extension is tapped until
   /// the lines replace it, so the view is never blank.
-  private func generate() {
+  private func generate(after prelude: (@Sendable (AvailabilityService) async -> Bool)? = nil) {
+    generation += 1
+    let run = generation
     state = .working
     Task { [service] in
-      let outcome = await service.generate()
-      // The read ran off the main thread; only the result comes back to it.
-      await MainActor.run { self.apply(outcome) }
+      let wrote = await prelude?(service)
+      // One pass off the main thread: the app-group read that restores R13a's
+      // toggle, the calendar fetch and the computation. Only the result comes
+      // back to the main thread, because a main thread blocked on either kind
+      // of I/O is what the extension's watchdog kills.
+      let result = await service.generate()
+      await MainActor.run {
+        guard run == self.generation else { return }
+        self.timeZoneSwitch.isOn = result.settings.appendsTimeZoneLabel
+        guard wrote != false else {
+          self.state = .settingsUnavailable
+          return
+        }
+        self.apply(result.outcome)
+      }
     }
   }
 
@@ -71,19 +90,23 @@ final class MessagesViewController: MSMessagesAppViewController {
 
   @objc private func timeZoneToggled() {
     let isOn = timeZoneSwitch.isOn
-    service.update { $0.appendsTimeZoneLabel = isOn }
-    generate()
+    generate { service in
+      await service.updateSettings { $0.appendsTimeZoneLabel = isOn }
+    }
   }
+
 
   /// R15. `insertText` puts the text in the compose field and stops there. The
   /// owner reviews, edits and sends.
   @objc private func insertTapped() {
     guard case .rendered(let availability) = state, let conversation else { return }
-    insertButton.isEnabled = false
+    let run = generation
+    state = .inserting
     conversation.insertText(availability.text) { [weak self] error in
-      // The completion fires on an arbitrary background queue.
+      // The completion fires on an arbitrary background queue, and may arrive
+      // after the extension was reactivated and started a fresh run.
       Task { @MainActor in
-        guard let self else { return }
+        guard let self, run == self.generation else { return }
         // Replacing the control with a confirmation also removes the
         // second-tap question: what `insertText` does to a compose field that
         // already has text in it is undocumented.
@@ -113,6 +136,13 @@ final class MessagesViewController: MSMessagesAppViewController {
       spinner.stopAnimating()
       textView.text = [access.summary, access.remedy].compactMap { $0 }.joined(separator: "\n\n")
       insertButton.isEnabled = false
+    case .inserting:
+      spinner.startAnimating()
+      insertButton.isEnabled = false
+    case .settingsUnavailable:
+      spinner.stopAnimating()
+      textView.text = AvailabilityMessage.settingsUnavailable
+      insertButton.isEnabled = false
     case .inserted:
       spinner.stopAnimating()
       insertButton.isEnabled = false
@@ -137,7 +167,14 @@ final class MessagesViewController: MSMessagesAppViewController {
     view.backgroundColor = .clear
 
     textView.isEditable = false
-    textView.font = .monospacedSystemFont(ofSize: UIFont.smallSystemFontSize, weight: .regular)
+    // Scaled through UIFontMetrics rather than set at a fixed point size:
+    // `adjustsFontForContentSizeCategory` only rescales a font that carries
+    // text-style metadata, so a bare `monospacedSystemFont` would leave the
+    // lines one size at every Dynamic Type setting.
+    let body = UIFont.preferredFont(forTextStyle: .footnote)
+    textView.font = UIFontMetrics(forTextStyle: .footnote).scaledFont(
+      for: .monospacedSystemFont(ofSize: body.pointSize, weight: .regular)
+    )
     textView.adjustsFontForContentSizeCategory = true
     textView.backgroundColor = .clear
 
@@ -146,6 +183,10 @@ final class MessagesViewController: MSMessagesAppViewController {
     timeZoneLabel.adjustsFontForContentSizeCategory = true
 
     timeZoneSwitch.addTarget(self, action: #selector(timeZoneToggled), for: .valueChanged)
+    // UIKit announces an unlabeled switch as just "off, switch"; the adjacent
+    // label is a separate element and is not read with it.
+    timeZoneSwitch.accessibilityLabel = "Append time zone"
+    insertButton.accessibilityLabel = "Insert availability into the message"
 
     insertButton.setTitle("Insert", for: .normal)
     insertButton.addTarget(self, action: #selector(insertTapped), for: .touchUpInside)

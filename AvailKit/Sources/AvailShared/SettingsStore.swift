@@ -47,11 +47,15 @@ public struct SettingsStore: Sendable {
   }
 
   /// Loads, applies `change`, and writes the result back.
+  ///
+  /// The write error propagates. A swallowed one is invisible in exactly the
+  /// way that matters: the caller re-reads the settings to render them, sees
+  /// the old value, and shows a control that silently snapped back.
   @discardableResult
-  public func update(_ change: (inout Settings) -> Void) -> Settings {
+  public func update(_ change: (inout Settings) -> Void) throws -> Settings {
     var settings = load()
     change(&settings)
-    try? save(settings)
+    try save(settings)
     return settings
   }
 }

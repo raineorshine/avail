@@ -36,9 +36,10 @@ public struct AnnotatedEvent: Sendable, Hashable {
   /// R8's padding is applied once, here, rather than inside the scan.
   public var busyInterval: DateInterval? {
     guard annotation.blocksAvailability else { return nil }
-    let start = event.start.addingTimeInterval(-annotation.bufferBefore)
-    let end = event.end.addingTimeInterval(annotation.bufferAfter)
-    return DateInterval(start: start, end: max(start, end))
+    return .clamped(
+      from: event.start.addingTimeInterval(-annotation.bufferBefore),
+      to: event.end.addingTimeInterval(annotation.bufferAfter)
+    )
   }
 
   /// Pairs events with their annotations positionally. A count mismatch is a

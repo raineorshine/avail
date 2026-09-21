@@ -25,8 +25,14 @@ the title back if the ship does not land. Do not report either. See `AGENTS.md` 
 ### 1. Quality gate (must pass before committing)
 
 ```bash
-cd AvailKit && xcodebuild test -scheme AvailKit-Package -destination 'platform=macOS'
+test -z "$(grep -rhE '^import ' AvailKit/Sources | grep -vE '^import Foundation$')" && cd AvailKit && xcodebuild test -scheme AvailKit-Package -destination 'platform=macOS'
 ```
+
+- The first command is the module's import ban, and it has to be here because
+  nothing in the build enforces it: a Swift package target can import a system
+  framework with no manifest entry, so `import EventKit` inside `AvailKit`
+  compiles and the suite below stays green. It is an emptiness test rather than
+  `grep -q -v`, whose exit status differs between greps.
 
 - The Foundation-only Swift package, against this Mac. No simulator runtime, no signing, no device,
   and nothing to install first. It must print `** TEST SUCCEEDED **`; a failure exits 65.

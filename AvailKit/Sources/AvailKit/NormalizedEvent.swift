@@ -30,21 +30,22 @@ public enum ParticipantStatus: String, Sendable, Hashable, Codable, CaseIterable
 
 /// One participant of an event, flattened out of whatever the platform's
 /// participant type happens to be.
-public struct EventAttendee: Sendable, Hashable, Codable {
+///
+/// This is also what the response rule reads: it carries exactly what
+/// `Participant` requires, so the EventKit adapter maps straight to it rather
+/// than through a second structurally identical type.
+public struct EventAttendee: Sendable, Hashable, Codable, Participant {
   public let name: String?
   public let isCurrentUser: Bool
-  public let isOrganizer: Bool
   public let status: ParticipantStatus
 
   public init(
     name: String? = nil,
     isCurrentUser: Bool = false,
-    isOrganizer: Bool = false,
     status: ParticipantStatus = .unknown
   ) {
     self.name = name
     self.isCurrentUser = isCurrentUser
-    self.isOrganizer = isOrganizer
     self.status = status
   }
 }
@@ -110,7 +111,7 @@ public struct NormalizedEvent: Sendable, Hashable, Identifiable {
 
   public var id: ID { ID(eventIdentifier: eventIdentifier, start: start) }
 
-  public var interval: DateInterval { DateInterval(start: start, end: max(start, end)) }
+  public var interval: DateInterval { .clamped(from: start, to: end) }
 
   public init(
     eventIdentifier: String,
@@ -140,5 +141,17 @@ public struct NormalizedEvent: Sendable, Hashable, Identifiable {
     self.isAllDay = isAllDay
     self.responseStatus = responseStatus
     self.availability = availability
+  }
+}
+
+extension Sequence<NormalizedEvent> {
+  /// KTD12. One entry per occurrence, first one wins.
+  ///
+  /// The key is the identifier *and* the start: occurrences of a series share
+  /// an identifier, so deduplicating on it alone would collapse a weekly
+  /// meeting into a single entry and hand back a week that looks open.
+  public func deduplicatedByOccurrence() -> [NormalizedEvent] {
+    var seen: Set<NormalizedEvent.ID> = []
+    return filter { seen.insert($0.id).inserted }
   }
 }

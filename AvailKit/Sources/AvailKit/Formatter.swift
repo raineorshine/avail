@@ -13,7 +13,8 @@ public struct AvailabilityFormatter: Sendable {
     self.calendar = calendar
   }
 
-  private static let weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+  /// Internal so the suite reads the same table rather than retyping it.
+  static let weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
   /// R9. The date prefix once, then the day's blocks separated by commas, and
   /// the timezone label at the end of the line when R13a's toggle is on.

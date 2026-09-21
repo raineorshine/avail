@@ -21,8 +21,7 @@ public struct BlockFinder: Sendable {
     components.hour = rules.dayStartHour
     let start = calendar.date(from: components)!
     components.hour = rules.dayEndHour
-    let end = calendar.date(from: components)!
-    return DateInterval(start: start, end: max(start, end))
+    return .clamped(from: start, to: calendar.date(from: components)!)
   }
 
   /// The blocks left in `day`'s window once every blocking event, widened by
@@ -35,6 +34,22 @@ public struct BlockFinder: Sendable {
     annotated: [AnnotatedEvent],
     notBefore: Date? = nil
   ) -> [FreeBlock] {
+    freeBlocks(
+      on: day, busy: Self.merged(annotated.compactMap(\.busyInterval)), notBefore: notBefore
+    )
+  }
+
+  /// The same, given the merged busy intervals directly.
+  ///
+  /// - Parameter busy: disjoint intervals sorted by start, as `merged(_:)`
+  ///   returns them. They do not depend on which day is being examined, so a
+  ///   search over a horizon of up to forty days merges once rather than once
+  ///   per day.
+  public func freeBlocks(
+    on day: Date,
+    busy: [DateInterval],
+    notBefore: Date? = nil
+  ) -> [FreeBlock] {
     let window = window(for: day)
     let start = max(window.start, notBefore ?? window.start)
     guard start < window.end else { return [] }
@@ -42,7 +57,7 @@ public struct BlockFinder: Sendable {
     var cursor = start
     var blocks: [FreeBlock] = []
 
-    for busy in Self.merged(annotated.compactMap(\.busyInterval)) {
+    for busy in busy {
       guard busy.end > cursor else { continue }
       guard busy.start < window.end else { break }
       append(&blocks, from: cursor, to: min(busy.start, window.end))

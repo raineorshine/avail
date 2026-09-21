@@ -10,13 +10,19 @@ import Foundation
 /// objects are alive is a documented hazard, and objects must not cross
 /// stores. Fetches are synchronous and must not run on the main thread -- in
 /// an extension a blocked main thread is a watchdog kill -- so every caller
-/// reaches this from a detached task. The lock is what makes that safe when
-/// the app's preview and a refresh overlap.
+/// reaches this from a detached task.
+///
+/// The lock keeps one fetch *sequence* -- read the calendars, build the
+/// predicate against them, run it -- from interleaving with another when the
+/// app's preview and a refresh overlap. It is not a claim that every touch of
+/// the store is serialized: `requestAccess` cannot hold it across its await,
+/// and single-flights instead.
 final class CalendarReader: @unchecked Sendable {
   static let shared = CalendarReader()
 
   private let store = EKEventStore()
   private let lock = NSLock()
+  private var isRequestingAccess = false
 
   private init() {}
 
@@ -26,13 +32,34 @@ final class CalendarReader: @unchecked Sendable {
   /// result, because the grant is recorded against the containing app's bundle
   /// identifier.
   func requestAccess() async -> CalendarAccessState {
-    await CalendarAccess.requestFullAccess(using: store)
+    // A lock cannot be held across an await -- Swift 6 rejects even the
+    // attempt -- so this collapses concurrent callers instead: two screens
+    // appearing at once must not put two prompts up. The loser reads the
+    // current state and picks the result up on its next refresh, which is
+    // what the store's change notification is for.
+    guard claimAccessRequest() else { return accessState }
+    defer { releaseAccessRequest() }
+    return await CalendarAccess.requestFullAccess(using: store)
   }
 
   /// Fires whenever the store changes. The store does not update in place
   /// after a grant, so the app refetches rather than trusting what it has.
   nonisolated var changes: NotificationCenter.Notifications {
     NotificationCenter.default.notifications(named: .EKEventStoreChanged)
+  }
+
+  /// Scoped rather than `lock()`/`unlock()`, which Swift 6 makes unavailable
+  /// in an async context.
+  private func claimAccessRequest() -> Bool {
+    lock.withLock {
+      guard !isRequestingAccess else { return false }
+      isRequestingAccess = true
+      return true
+    }
+  }
+
+  private func releaseAccessRequest() {
+    lock.withLock { isRequestingAccess = false }
   }
 
   /// R26. Every calendar on the device, with whatever the owner needs to
@@ -70,17 +97,12 @@ final class CalendarReader: @unchecked Sendable {
       withStart: interval.start, end: interval.end, calendars: calendars
     )
 
-    // KTD12. Occurrences of a series share an identifier, so the key is the
-    // identifier and the start; deduplicating on the identifier alone would
-    // collapse a weekly meeting into one entry and hand back a week that looks
-    // open.
-    var seen: Set<NormalizedEvent.ID> = []
     return
       store
       .events(matching: predicate)
       .filter { $0.status != .canceled }
       .compactMap(Self.normalize(_:))
-      .filter { seen.insert($0.id).inserted }
+      .deduplicatedByOccurrence()
   }
 
   private static func normalize(_ calendar: EKCalendar) -> EventCalendar {
@@ -95,7 +117,7 @@ final class CalendarReader: @unchecked Sendable {
 
   private static func normalize(_ event: EKEvent) -> NormalizedEvent? {
     guard let start = event.startDate, let end = event.endDate else { return nil }
-    let attendees = event.attendees?.map(EventKitParticipant.init)
+    let attendees = event.attendees?.map(EventAttendee.init)
     return NormalizedEvent(
       eventIdentifier: event.eventIdentifier ?? event.calendarItemIdentifier,
       title: event.title ?? "",
@@ -105,14 +127,7 @@ final class CalendarReader: @unchecked Sendable {
       conferenceURL: NormalizedEvent.conferenceURL(
         url: event.url, location: event.location, notes: event.notes
       ),
-      attendees: attendees?.map {
-        EventAttendee(
-          name: $0.name,
-          isCurrentUser: $0.isCurrentUser,
-          isOrganizer: $0.name != nil && $0.name == event.organizer?.name,
-          status: $0.status
-        )
-      },
+      attendees: attendees,
       calendar: normalize(event.calendar),
       start: start,
       end: end,

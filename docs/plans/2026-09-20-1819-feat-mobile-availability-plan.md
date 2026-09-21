@@ -220,7 +220,7 @@ Swift owns everything with a side effect: the EventKit read, any network the ann
 
 ### Key Technical Decisions
 
-KTD1. The pure availability module ships as a local Swift package, `AvailKit/`, consumed by an xcodegen-generated Xcode project that holds the app and extension targets. A Swift package target cannot link EventKit or a UI framework unless the manifest declares it, which turns R24's import ban from a review convention into a build-system invariant. Measured alternative: the same module as a framework target inside the Xcode project takes ~62s to test against a cold simulator boot versus ~10s for the package, and its iOS-platform test bundle has no usable Mac destination at all — `xcodebuild` rejects `platform=macOS` outright — so it would force a simulator into the unattended gate. Governs R24, R25.
+KTD1. The pure availability module ships as a local Swift package, `AvailKit/`, consumed by an xcodegen-generated Xcode project that holds the app and extension targets. The manifest makes half of R24's import ban structural: `AvailShared` cannot reach `AvailKit`, because it does not depend on it. The other half is **not** manifest-enforced, contrary to this plan's original premise — a Swift package target imports a system framework with no manifest entry, so `import EventKit` inside `AvailKit` compiles and the suite stays green. Verified empirically during implementation by building the package with that import added. The import ban therefore rests entirely on the Verification Contract's purity check, which for that reason runs in CI and in the `ship` gate rather than only in this document. Measured alternative: the same module as a framework target inside the Xcode project takes ~62s to test against a cold simulator boot versus ~10s for the package, and its iOS-platform test bundle has no usable Mac destination at all — `xcodebuild` rejects `platform=macOS` outright — so it would force a simulator into the unattended gate. Governs R24, R25.
 
 KTD2. The hard test gate runs the package's own scheme against the Mac: `xcodebuild test -scheme AvailKit-Package -destination 'platform=macOS'`, invoked from `AvailKit/`. No simulator runtime, no signing, no device. Two scheme names are wrong here and each fails differently. The scheme xcodegen vends for the package inside the generated `.xcodeproj` is build-only and has no test action, so the gate must not be pointed at the project. Neither may it be pointed at `-scheme AvailKit`: once the manifest declares a second library product, SwiftPM vends `AvailKit` and `AvailShared` as build-only product schemes and puts the test action on the aggregate `AvailKit-Package`, which answers `xcodebuild: error: Scheme AvailKit is not currently configured for the test action`. The aggregate covers both test targets in one invocation. `swift test --package-path AvailKit` is the equivalent and is what CI runs.
 
@@ -605,10 +605,12 @@ That is the command to use when the question is whether everything testable is g
 **Module purity**, enforcing R24 mechanically:
 
 ```
-! grep -rhE '^import ' AvailKit/Sources | grep -qvE '^import Foundation$'
+test -z "$(grep -rhE '^import ' AvailKit/Sources | grep -vE '^import Foundation$')"
 ```
 
-An allowlist, not a denylist: the gate runs on the macOS destination, where `import AppKit` would compile and a denylist naming only the iOS frameworks would wave it through.
+An allowlist, not a denylist: the gate runs on the macOS destination, where `import AppKit` would compile and a denylist naming only the iOS frameworks would wave it through. An emptiness test rather than `grep -q -v`, whose exit status differs between grep implementations — the `-q` form passes a violating tree under some of them, which would make the one check enforcing R24 silently useless.
+
+This check runs in CI and in the `ship` gate, not only here. It is the *only* thing enforcing the ban (see KTD1).
 
 **App and extension compile**, from the repository root after `xcodegen generate`:
 

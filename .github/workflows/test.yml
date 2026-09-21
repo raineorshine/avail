@@ -13,15 +13,45 @@ jobs:
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v7
-      - run: swift test --package-path AvailKit
+
+      # The module's import ban, which nothing else enforces. A Swift package
+      # target can import a system framework with no manifest entry, so
+      # `import EventKit` inside AvailKit compiles and every other check here
+      # stays green. An allowlist, not a denylist: this runs on macOS, where
+      # `import AppKit` would compile too.
+      - name: Module purity
+        run: |
+          offenders=$(grep -rhE '^import ' AvailKit/Sources | grep -vE '^import Foundation$' | sort -u)
+          if [ -n "$offenders" ]; then
+            echo "AvailKit/Sources must import Foundation and nothing else. Found:"
+            echo "$offenders"
+            exit 1
+          fi
+
+      - name: Module suite
+        run: swift test --package-path AvailKit --xunit-output "$RUNNER_TEMP/tests.xml"
+
+      # A run that executed nothing looks exactly like a healthy one: the suite
+      # is all swift-testing, so the XCTest half legitimately reports
+      # "Executed 0 tests, with 0 failures" and a zero-test run still exits 0.
+      - name: Assert the suite actually ran
+        run: |
+          report="$RUNNER_TEMP/tests-swift-testing.xml"
+          count=$(grep -o '<testcase' "$report" | wc -l | tr -d ' ')
+          echo "executed $count test cases"
+          [ "$count" -gt 0 ]
 
   build:
-    # Non-blocking on purpose: the module gate above is what must be green.
-    # This exists because the stickers icon, the principal-class prefix, the
-    # entitlements and the embed phase are the parts most likely to break
-    # silently, and none of them is reachable from the package.
+    # The only automated check on App/, MessagesExtension/ and Shared/Sources,
+    # none of which has a test target, and the only place the stickers icon,
+    # the principal-class prefix, the entitlements and the embed phase are
+    # exercised at all.
+    #
+    # Deliberately not continue-on-error: a job that reports success when it
+    # fails is worse than no job, and it would hide the job going permanently
+    # dead. Nothing is gated on it — master takes a fast-forward push and there
+    # are no required checks — so a red X costs nothing and is pure signal.
     runs-on: macos-26
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v7
       - run: brew install xcodegen

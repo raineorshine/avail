@@ -38,21 +38,20 @@ enum CalendarAccess {
   }
 }
 
-/// Adapts EventKit's participant to the Foundation-only protocol the response
-/// rule is written against.
-///
-/// `EKParticipant` cannot be constructed and `EKEvent.attendees` is read-only,
-/// so without this the rule that decides whether an event blocks time would
-/// have no reachable test.
-struct EventKitParticipant: Participant {
-  let name: String?
-  let isCurrentUser: Bool
-  let status: ParticipantStatus
-
+extension EventAttendee {
+  /// The one place EventKit's participant meets the module's.
+  ///
+  /// `EKParticipant` cannot be constructed and `EKEvent.attendees` is
+  /// read-only, so the response rule is written against the Foundation-only
+  /// `Participant` protocol that `EventAttendee` conforms to; without that
+  /// seam the rule deciding whether an event blocks time would have no
+  /// reachable test.
   init(_ participant: EKParticipant) {
-    name = participant.name
-    isCurrentUser = participant.isCurrentUser
-    status = ParticipantStatus(participant.participantStatus)
+    self.init(
+      name: participant.name,
+      isCurrentUser: participant.isCurrentUser,
+      status: ParticipantStatus(participant.participantStatus)
+    )
   }
 }
 

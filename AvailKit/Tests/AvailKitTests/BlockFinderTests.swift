@@ -19,16 +19,38 @@ struct BlockFinderTests {
     }
   }
 
+  /// Buffers that differ per event. The shipped annotator's uniform buffer
+  /// cannot reorder anything -- subtracting one constant from every start
+  /// preserves their order -- so only a skewed one can show that the merge
+  /// sorts by the widened start rather than the raw one.
+  struct SkewedAnnotator: Annotator {
+    let wideTitle: String
+    let bufferBefore: TimeInterval
+
+    func annotate(_ events: [NormalizedEvent]) -> [EventAnnotation] {
+      events.map { event in
+        EventAnnotation(
+          blocksAvailability: true,
+          bufferBefore: event.title == wideTitle ? bufferBefore : 0,
+          bufferAfter: 0
+        )
+      }
+    }
+  }
+
   func blocks(
     on day: String,
     _ events: [NormalizedEvent],
     notBefore: Date? = nil,
-    finder: BlockFinder? = nil
+    finder: BlockFinder? = nil,
+    annotator: any Annotator = DeterministicAnnotator()
   ) -> [String] {
     let finder = finder ?? self.finder
-    let annotated = AnnotatedEvent.pairing(events, with: DeterministicAnnotator().annotate(events))
+    let annotated = AnnotatedEvent.pairing(events, with: FallbackAnnotator(primary: annotator).annotate(events))
     return times(
-      finder.freeBlocks(on: Fixture.date(day), annotated: annotated, notBefore: notBefore),
+      finder.freeBlocks(
+        on: Fixture.date(day, in: finder.calendar), annotated: annotated, notBefore: notBefore
+      ),
       in: finder.calendar
     )
   }
@@ -91,14 +113,23 @@ struct BlockFinderTests {
     #expect(blocks(on: "2017-07-12", events) == ["12:15-19:00"])
   }
 
-  /// A later-starting event whose buffer reaches back before an earlier one's
-  /// still merges: the finder sorts by widened start, not by raw start.
+  /// KTD6, and the reason the merge cannot be rewritten to sort the annotated
+  /// events by `event.start` before widening them.
+  ///
+  /// `wide` starts an hour after `narrow` but carries a 90-minute buffer, so
+  /// its *widened* start is half an hour earlier. Sorted by the widened start
+  /// the two merge into 10:30-12:30 and the morning block ends at 10:30;
+  /// sorted by the raw start they merge into 11:00-12:30 instead and 10:30 to
+  /// 11:00 is wrongly offered as free.
   @Test func mergingSortsByTheWidenedStartNotTheRawStart() {
     let events = [
-      Fixture.event("late", from: "2017-07-12 12:00", to: "2017-07-12 13:00"),
-      Fixture.event("early", from: "2017-07-12 11:00", to: "2017-07-12 11:50"),
+      Fixture.event("narrow", from: "2017-07-12 11:00", to: "2017-07-12 11:30"),
+      Fixture.event("wide", from: "2017-07-12 12:00", to: "2017-07-12 12:30"),
     ]
-    #expect(blocks(on: "2017-07-12", events) == ["09:00-10:45", "13:15-19:00"])
+    let skewed = SkewedAnnotator(wideTitle: "wide", bufferBefore: 90 * 60)
+    #expect(
+      blocks(on: "2017-07-12", events, annotator: skewed) == ["09:00-10:30", "12:30-19:00"]
+    )
   }
 
   @Test func anEventEntirelyOutsideTheWindowRemovesNothing() {

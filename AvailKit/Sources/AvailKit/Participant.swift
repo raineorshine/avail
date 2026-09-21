@@ -40,10 +40,16 @@ extension NormalizedEvent {
     return [location, notes].compactMap { $0 }.lazy.compactMap(firstLink(in:)).first
   }
 
+  /// Built once. `NSDataDetector` wraps a compiled regular expression, is
+  /// documented as expensive to construct and safe to reuse, and this runs
+  /// for the location and then the notes of every event in a horizon that
+  /// reaches forty days.
+  private static let linkDetector = try? NSDataDetector(
+    types: NSTextCheckingResult.CheckingType.link.rawValue
+  )
+
   private static func firstLink(in text: String) -> URL? {
-    guard
-      let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
-    else { return nil }
+    guard let detector = linkDetector else { return nil }
     let range = NSRange(text.startIndex..<text.endIndex, in: text)
     return detector.firstMatch(in: text, range: range)?.url
   }

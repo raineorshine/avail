@@ -47,8 +47,13 @@ public struct Settings: Sendable, Hashable, Codable {
   /// R5, R26. Matches the named calendar once and records that it happened.
   /// Name matching is confined to this call; everything after keys on the
   /// identifier.
+  ///
+  /// An empty list leaves the seed pending rather than spending it, for the
+  /// same reason `pruned` leaves the selection alone: it means the calendars
+  /// could not be read, not that the device has none. Spending it there would
+  /// silently cost the owner the one exclusion they never asked for.
   public func seeding(from calendars: [CalendarDescriptor]) -> Settings {
-    guard !hasSeededExclusions else { return self }
+    guard !hasSeededExclusions, !calendars.isEmpty else { return self }
     var seeded = self
     seeded.hasSeededExclusions = true
     for calendar in calendars where calendar.name == Self.seededCalendarName {

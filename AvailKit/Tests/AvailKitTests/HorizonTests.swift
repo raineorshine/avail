@@ -8,9 +8,7 @@ struct HorizonTests {
   let horizon = Horizon(calendar: Fixture.calendar)
 
   func weekday(_ date: Date) -> String {
-    ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][
-      Fixture.calendar.component(.weekday, from: date) - 1
-    ]
+    AvailabilityFormatter.weekdays[Fixture.calendar.component(.weekday, from: date) - 1]
   }
 
   /// R2, AE1. 10 July 2017 is a Monday. Day 7 is a Monday too, and day 8 is a

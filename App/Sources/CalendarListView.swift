@@ -1,7 +1,6 @@
 import AvailKit
 import AvailShared
 import SwiftUI
-import UIKit
 
 /// R26, R27, R27a. The calendar list, the access prompt that replaces it until
 /// the grant is full, and the live preview.
@@ -14,14 +13,17 @@ final class CalendarListModel {
   var calendars: [EventCalendar] = []
   var settings: Settings = .default
   var outcome: AvailabilityOutcome?
-  var isWorking = false
+  /// Settings writes are a read-modify-write over a shared file. Holding the
+  /// in-flight one and awaiting it before starting the next keeps two quick
+  /// toggles from landing out of order and dropping the later change.
+  private var pendingWrite: Task<Void, Never>?
 
   /// R27a. Requested when the screen first appears; after that the state is
   /// only re-read, because the system prompts once.
   func appeared() async {
     accessState = service.accessState
     if accessState.canPromptInApp {
-      accessState = await service.reader.requestAccess()
+      accessState = await service.requestAccess()
     }
     await refresh()
   }
@@ -33,11 +35,12 @@ final class CalendarListModel {
       outcome = .accessRequired(accessState)
       return
     }
-    isWorking = true
-    defer { isWorking = false }
     calendars = await service.calendars()
-    settings = service.reconciledSettings(with: calendars)
-    outcome = await service.generate()
+    // One pass: the generation reconciles the settings against the calendars
+    // already fetched and hands both back, rather than fetching them again.
+    let generation = await service.generate(calendars: calendars)
+    settings = generation.settings
+    outcome = generation.outcome
   }
 
   func isExcluded(_ calendar: EventCalendar) -> Bool {
@@ -52,8 +55,13 @@ final class CalendarListModel {
     } else {
       settings.excludedCalendarIdentifiers.remove(calendar.identifier)
     }
-    service.save(settings)
-    Task { await refresh() }
+    let excluded = settings.excludedCalendarIdentifiers
+    let previous = pendingWrite
+    pendingWrite = Task {
+      await previous?.value
+      await service.updateSettings { $0.excludedCalendarIdentifiers = excluded }
+      await refresh()
+    }
   }
 }
 

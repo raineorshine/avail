@@ -13,8 +13,16 @@ entirely on-device, reading Apple Calendar through EventKit. Not distributed;
   and the formatter. `AvailShared` holds the settings value and the app-group
   store the app and the extension both read. Neither imports EventKit or a UI
   framework, which is what lets them be tested with no device and no calendar
-  access; the package manifest makes that a build-system invariant rather than
-  a review convention.
+  access.
+
+  **Nothing in the build enforces that.** A Swift package target can import a
+  system framework with no manifest entry, so `import EventKit` inside
+  `AvailKit` compiles and the suite stays green — verified, not assumed. The
+  only thing holding the line is the purity check under `### Testing`, which
+  runs in CI and in the `ship` gate. The manifest does enforce the other half
+  (`AvailShared` cannot reach `AvailKit`, because it does not depend on it),
+  which is why `CalendarDescriptor` restates part of `EventCalendar` instead of
+  importing it.
 - `Shared/Sources/` — the EventKit read and the wiring around it, compiled into
   both targets. This code imports EventKit, which is why it cannot live in the
   package.
@@ -46,6 +54,18 @@ answers `Scheme AvailKit is not currently configured for the test action`.
 `swift test --package-path AvailKit` is the equivalent and is what CI runs.
 Expect an empty XCTest shim to print `Executed 0 tests, with 0 failures` ahead
 of the real run — the exit code is the signal, not that line.
+
+The module imports Foundation and nothing else, and this is the check that
+enforces it:
+
+```sh
+test -z "$(grep -rhE '^import ' AvailKit/Sources | grep -vE '^import Foundation$')"
+```
+
+An allowlist, not a denylist: the gate runs on the macOS destination, where a
+denylist naming only the iOS frameworks would wave `import AppKit` through.
+Written as an emptiness test rather than `grep -q -v`, whose exit status
+differs between greps.
 
 The app and the extension carry no tests and are compile-checked only:
 

@@ -74,6 +74,16 @@ struct SettingsStoreTests {
     #expect(settings.hasSeededExclusions)
   }
 
+  /// An empty list is "could not read the calendars", not "there are none".
+  /// Spending the one-shot seed there would cost the owner the exclusion they
+  /// never asked for, with no way to notice.
+  @Test func anEmptyCalendarListLeavesTheSeedPending() {
+    let settings = Settings.default.seeding(from: [])
+    #expect(!settings.hasSeededExclusions)
+    // And the seed still fires once the calendars do arrive.
+    #expect(settings.seeding(from: calendars).excludedCalendarIdentifiers == ["cal-structure"])
+  }
+
   /// A full resync can lose a calendar's identifier. R26 keys the selection on
   /// that identifier, so a stored one that no longer resolves is dropped and
   /// the calendar reverts to blocking. Recovering it by name would reintroduce

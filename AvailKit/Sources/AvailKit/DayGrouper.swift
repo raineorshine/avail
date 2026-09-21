@@ -37,18 +37,26 @@ public struct DayGrouper: Sendable {
     let finder = BlockFinder(calendar: calendar, rules: rules)
     let searchStart = horizon.searchStart(from: now)
 
-    var events = try provider(horizon.interval(from: now))
+    var annotated = annotating(
+      try provider(horizon.interval(from: now)).deduplicatedByOccurrence()
+    )
     var days = qualifying(
-      horizon.days(from: now), events: events, finder: finder, notBefore: searchStart
+      horizon.days(from: now), annotated: annotated, finder: finder, notBefore: searchStart
     )
 
     if days.count < rules.maximumDays {
-      // The second pass reads the following 30 days. Its events are added to
-      // the first pass's rather than replacing them, because an event can span
-      // the boundary and each fetch returns it.
-      events = deduplicated(events + (try provider(horizon.secondPassInterval(from: now))))
+      // The second pass reads the following 30 days. An event can span the
+      // boundary and each fetch returns it, so only what the first pass did
+      // not already carry is annotated: the batch stays one call, and events
+      // already resolved are not re-sent to an annotator that has a time
+      // budget and falls back for the whole batch when it runs out.
+      let resolved = Set(annotated.map(\.event.id))
+      let fresh = try provider(horizon.secondPassInterval(from: now))
+        .deduplicatedByOccurrence()
+        .filter { !resolved.contains($0.id) }
+      if !fresh.isEmpty { annotated += annotating(fresh) }
       days += qualifying(
-        horizon.secondPassDays(from: now), events: events, finder: finder, notBefore: nil
+        horizon.secondPassDays(from: now), annotated: annotated, finder: finder, notBefore: nil
       )
     }
 
@@ -56,15 +64,19 @@ public struct DayGrouper: Sendable {
   }
 
   private func qualifying(
-    _ days: [Date], events: [NormalizedEvent], finder: BlockFinder, notBefore: Date?
+    _ days: [Date], annotated: [AnnotatedEvent], finder: BlockFinder, notBefore: Date?
   ) -> [DayAvailability] {
-    let annotated = AnnotatedEvent.pairing(events, with: annotate(events))
+    // Merged once per pass rather than once per day: which intervals are busy
+    // does not depend on the day being examined, and a horizon runs to forty
+    // days in the worst case.
+    let busy = BlockFinder.merged(annotated.compactMap(\.busyInterval))
     return days.compactMap { day in
-      let blocks = finder.freeBlocks(
-        on: day,
-        annotated: annotated,
-        notBefore: calendar.isDate(day, inSameDayAs: notBefore ?? day) ? notBefore : nil
-      )
+      // `notBefore` is passed to every day, not just the one it falls on.
+      // The finder clamps with `max(window.start, notBefore)`, so a start
+      // earlier than a later day's 9am is inert; and when a late-evening run
+      // rounds the start past midnight, this is what still drops today
+      // instead of offering hours that have already gone.
+      let blocks = finder.freeBlocks(on: day, busy: busy, notBefore: notBefore)
       // R10. A day with no qualifying block produces no line.
       guard !blocks.isEmpty else { return nil }
       return DayAvailability(day: day, blocks: capped(blocks))
@@ -84,15 +96,8 @@ public struct DayGrouper: Sendable {
     return kept.sorted { $0.start < $1.start }
   }
 
-  private func annotate(_ events: [NormalizedEvent]) -> [EventAnnotation] {
-    // R20: an annotator that cannot answer is not allowed to fail the run.
-    (annotator as? FallbackAnnotator ?? FallbackAnnotator(primary: annotator)).annotate(events)
-  }
-
-  /// KTD12. Keyed on identifier *and* start, so the occurrences of a recurring
-  /// series stay distinct.
-  private func deduplicated(_ events: [NormalizedEvent]) -> [NormalizedEvent] {
-    var seen: Set<NormalizedEvent.ID> = []
-    return events.filter { seen.insert($0.id).inserted }
+  /// R20: an annotator that cannot answer is not allowed to fail the run.
+  private func annotating(_ events: [NormalizedEvent]) -> [AnnotatedEvent] {
+    AnnotatedEvent.pairing(events, with: FallbackAnnotator(primary: annotator).annotate(events))
   }
 }

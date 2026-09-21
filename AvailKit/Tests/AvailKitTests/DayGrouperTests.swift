@@ -143,6 +143,21 @@ struct DayGrouperTests {
     #expect(labels(days).first == "7/14")
   }
 
+  /// R4. Late enough that rounding up crosses midnight, today is gone rather
+  /// than offered back as a fully open day.
+  ///
+  /// This is the one case where the search start belongs to no day in the
+  /// list: at 23:45 it rounds to tomorrow 00:00, so a day-0 window that only
+  /// honored a start falling on its own date would see no start at all and
+  /// report 9am-7pm for hours that have already gone.
+  @Test func anInvocationLateEnoughToRoundPastMidnightDropsToday() {
+    let now = Fixture.date("2017-07-13 23:45")
+    let provider = RecordingProvider([])
+    let days = grouper.qualifyingDays(now: now, provider: provider.provide)
+    #expect(!labels(days).contains("7/13"))
+    #expect(labels(days).first == "7/14")
+  }
+
   /// KTD12. Two occurrences of one series both take time away; deduplicating
   /// on the shared identifier alone would hand back a day that looks open.
   @Test func twoOccurrencesOfOneSeriesBothBlock() {

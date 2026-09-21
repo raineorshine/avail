@@ -9,4 +9,10 @@ public enum AvailabilityMessage {
 
   public static let insertionFailed =
     "Could not insert the text. Copy it from the Avail app instead."
+
+  /// The app group did not resolve, so the two processes cannot share a
+  /// setting. Said plainly rather than shown as a control that will not stay
+  /// where it is put.
+  public static let settingsUnavailable =
+    "Avail cannot reach its shared settings, so the time zone switch will not stick. Reinstalling the app usually fixes it."
 }
