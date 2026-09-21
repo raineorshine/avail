@@ -21,6 +21,40 @@ public struct EventAnnotation: Sendable, Hashable {
   public static let free = EventAnnotation(blocksAvailability: false)
 }
 
+/// An event paired with what the annotation stage decided about it.
+public struct AnnotatedEvent: Sendable, Hashable {
+  public let event: NormalizedEvent
+  public let annotation: EventAnnotation
+
+  public init(event: NormalizedEvent, annotation: EventAnnotation) {
+    self.event = event
+    self.annotation = annotation
+  }
+
+  /// The event's interval already widened by its buffers, or `nil` when it
+  /// takes no time away. This is the only shape the block finder consumes, so
+  /// R8's padding is applied once, here, rather than inside the scan.
+  public var busyInterval: DateInterval? {
+    guard annotation.blocksAvailability else { return nil }
+    let start = event.start.addingTimeInterval(-annotation.bufferBefore)
+    let end = event.end.addingTimeInterval(annotation.bufferAfter)
+    return DateInterval(start: start, end: max(start, end))
+  }
+
+  /// Pairs events with their annotations positionally. A count mismatch is a
+  /// programming error: `FallbackAnnotator` is what turns one into the
+  /// deterministic rule set instead.
+  public static func pairing(
+    _ events: [NormalizedEvent], with annotations: [EventAnnotation]
+  ) -> [AnnotatedEvent] {
+    precondition(
+      events.count == annotations.count,
+      "annotations are positional: \(events.count) events, \(annotations.count) annotations"
+    )
+    return zip(events, annotations).map(AnnotatedEvent.init)
+  }
+}
+
 /// The one place inference will ever run.
 ///
 /// The whole batch resolves in a single call (R18). A per-event call shape is
