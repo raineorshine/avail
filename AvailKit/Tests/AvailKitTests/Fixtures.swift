@@ -87,3 +87,60 @@ enum Fixture {
     )
   }
 }
+
+extension Fixture {
+  /// The event list carried over from the JavaScript suite's `test/events.json`.
+  ///
+  /// The events port directly as inputs. Every expected output *string* is
+  /// recomputed: the old assertions were written against a 9am-5pm day, no
+  /// buffers, one line per block and no line cap, all four of which this
+  /// version changes, so an expectation copied across would be wrong while
+  /// looking plausible.
+  static var portedEvents: [NormalizedEvent] {
+    struct Record: Decodable {
+      struct Endpoint: Decodable { let dateTime: String }
+      let summary: String
+      let start: Endpoint
+      let end: Endpoint
+    }
+
+    let url = Bundle.module.url(forResource: "events", withExtension: "json")!
+    let records = try! JSONDecoder().decode([Record].self, from: Data(contentsOf: url))
+    return records.map { record in
+      NormalizedEvent(
+        eventIdentifier: record.summary,
+        title: record.summary,
+        calendar: defaultCalendarSource,
+        start: offsetDate(record.start.dateTime),
+        end: offsetDate(record.end.dateTime),
+        responseStatus: .accepted,
+        availability: .busy
+      )
+    }
+  }
+
+  /// Parses the fixtures' `2017-07-11T14:30:00-06:00` form without a
+  /// `DateFormatter`, which would default to the autoupdating locale.
+  static func offsetDate(_ text: String) -> Date {
+    let parts = text.split(separator: "T")
+    let day = parts[0].split(separator: "-").map { Int($0)! }
+    let time = parts[1].prefix(8).split(separator: ":").map { Int($0)! }
+    let sign = parts[1].contains("+") ? 1 : -1
+    let offset = parts[1].suffix(6).dropFirst().split(separator: ":").map { Int($0)! }
+
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(secondsFromGMT: sign * (offset[0] * 3600 + offset[1] * 60))!
+    return calendar.date(
+      from: DateComponents(
+        year: day[0], month: day[1], day: day[2],
+        hour: time[0], minute: time[1], second: time[2]
+      )
+    )!
+  }
+
+  /// Serves events out of a list the way the EventKit reader serves them out
+  /// of the store: everything overlapping the requested interval.
+  static func provider(_ events: [NormalizedEvent]) -> (DateInterval) -> [NormalizedEvent] {
+    { interval in events.filter { $0.end > interval.start && $0.start < interval.end } }
+  }
+}

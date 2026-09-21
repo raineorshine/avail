@@ -222,7 +222,7 @@ Swift owns everything with a side effect: the EventKit read, any network the ann
 
 KTD1. The pure availability module ships as a local Swift package, `AvailKit/`, consumed by an xcodegen-generated Xcode project that holds the app and extension targets. A Swift package target cannot link EventKit or a UI framework unless the manifest declares it, which turns R24's import ban from a review convention into a build-system invariant. Measured alternative: the same module as a framework target inside the Xcode project takes ~62s to test against a cold simulator boot versus ~10s for the package, and its iOS-platform test bundle has no usable Mac destination at all — `xcodebuild` rejects `platform=macOS` outright — so it would force a simulator into the unattended gate. Governs R24, R25.
 
-KTD2. The hard test gate runs the package's own scheme against the Mac: `xcodebuild test -scheme AvailKit -destination 'platform=macOS'`, invoked from `AvailKit/`. No simulator runtime, no signing, no device. The scheme xcodegen vends for the package inside the generated `.xcodeproj` is build-only and has no test action, so the gate must not be pointed at the project — `swift test --package-path AvailKit` is the equivalent and is what CI runs.
+KTD2. The hard test gate runs the package's own scheme against the Mac: `xcodebuild test -scheme AvailKit-Package -destination 'platform=macOS'`, invoked from `AvailKit/`. No simulator runtime, no signing, no device. Two scheme names are wrong here and each fails differently. The scheme xcodegen vends for the package inside the generated `.xcodeproj` is build-only and has no test action, so the gate must not be pointed at the project. Neither may it be pointed at `-scheme AvailKit`: once the manifest declares a second library product, SwiftPM vends `AvailKit` and `AvailShared` as build-only product schemes and puts the test action on the aggregate `AvailKit-Package`, which answers `xcodebuild: error: Scheme AvailKit is not currently configured for the test action`. The aggregate covers both test targets in one invocation. `swift test --package-path AvailKit` is the equivalent and is what CI runs.
 
 KTD3. The test suite pins its timezone by injecting a `Calendar` into the module, never by reading ambient state. The module takes a `Calendar` in its initializer. The default fixture calendar — used for every block-finding and formatting expectation — has a `timeZone` of `TimeZone(secondsFromGMT: -6 * 3600)`, a locale of `en_US_POSIX`, and an explicit `firstWeekday`; an assertion on that calendar pins its offset at −21600 with `isDaylightSavingTime()` false, so a wrong-sign edit fails loudly rather than drifting. Two cases inject a named zone instead, because a fixed offset cannot exercise what they test: `America/New_York` for the R13a timezone-label case, since a fixed offset renders its short generic name as `GMT-6` and never as `ET`; and `America/Denver` for the daylight-saving window case, since a zone with no transition in it passes that test vacuously whether or not KTD7 was implemented. Injection is what the pin requires; a fixed offset is the default, not the rule. This is the Swift form of the `process.env.TZ = 'Etc/GMT+6'` line in `test/spec.js`; it satisfies the same need without a scheme environment variable or a command-line `TZ`, both of which hide the problem again for everyone else. Governs R24.
 
@@ -339,7 +339,7 @@ U1 through U5 deliver the R24 module and its green gate with no Apple frameworks
 **Test scenarios:**
 - A trivial smoke test per package target, asserting each module is importable, so the gate has something to run before U2 exists.
 
-**Verification:** `xcodebuild test -scheme AvailKit -destination 'platform=macOS'` succeeds from `AvailKit/`. `xcodegen generate` followed by a simulator build of the app scheme succeeds and `Avail.app/PlugIns/AvailMessages.appex` exists in the build products.
+**Verification:** `xcodebuild test -scheme AvailKit-Package -destination 'platform=macOS'` succeeds from `AvailKit/`. `xcodegen generate` followed by a simulator build of the app scheme succeeds and `Avail.app/PlugIns/AvailMessages.appex` exists in the build products.
 
 ### U2. Normalized event model and the annotation seam
 
@@ -589,18 +589,18 @@ U1 through U5 deliver the R24 module and its green gate with no Apple frameworks
 **The hard gate**, run from `AvailKit/`:
 
 ```
-xcodebuild test -scheme AvailKit -destination 'platform=macOS'
+xcodebuild test -scheme AvailKit-Package -destination 'platform=macOS'
 ```
 
 It must report `** TEST SUCCEEDED **` and exit 0; a failure exits 65. Do not pass `-quiet` — it suppresses the lines that say what happened, which is the whole value of the log in an unattended run.
 
-That scheme covers the R24 module only. `AvailShared`'s tests are a second scheme, so the full headless suite is either both `xcodebuild` invocations or the one command that runs every test target:
+The scheme name is `AvailKit-Package`, not `AvailKit`: SwiftPM vends a build-only scheme per library product and puts the test action on the aggregate (KTD2). The aggregate covers both `AvailKitTests` and `AvailSharedTests`, so one invocation is the whole headless suite. The equivalent, and what CI runs:
 
 ```
 swift test --package-path AvailKit
 ```
 
-That is what CI runs, and it is the command to use when the question is whether everything testable is green.
+That is the command to use when the question is whether everything testable is green.
 
 **Module purity**, enforcing R24 mechanically:
 
