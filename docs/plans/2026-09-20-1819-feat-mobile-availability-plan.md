@@ -224,7 +224,7 @@ KTD1. The pure availability module ships as a local Swift package, `AvailKit/`, 
 
 KTD2. The hard test gate runs the package's own scheme against the Mac: `xcodebuild test -scheme AvailKit -destination 'platform=macOS'`, invoked from `AvailKit/`. No simulator runtime, no signing, no device. The scheme xcodegen vends for the package inside the generated `.xcodeproj` is build-only and has no test action, so the gate must not be pointed at the project — `swift test --package-path AvailKit` is the equivalent and is what CI runs.
 
-KTD3. The test suite pins its timezone by injecting a fixed-offset `Calendar` into the module, never by ambient state. The module takes a `Calendar` in its initializer; the suite constructs one whose `timeZone` is `TimeZone(secondsFromGMT: -6 * 3600)` and whose locale is `en_US_POSIX` with an explicit `firstWeekday`. A suite-level assertion pins the offset itself at −21600 with `isDaylightSavingTime()` false, so a wrong-sign edit fails loudly rather than drifting. This is the Swift form of the `process.env.TZ = 'Etc/GMT+6'` line in `test/spec.js`; it satisfies the same need without a scheme environment variable or a command-line `TZ`, both of which hide the problem again for everyone else. Governs R24.
+KTD3. The test suite pins its timezone by injecting a `Calendar` into the module, never by reading ambient state. The module takes a `Calendar` in its initializer. The default fixture calendar — used for every block-finding and formatting expectation — has a `timeZone` of `TimeZone(secondsFromGMT: -6 * 3600)`, a locale of `en_US_POSIX`, and an explicit `firstWeekday`; an assertion on that calendar pins its offset at −21600 with `isDaylightSavingTime()` false, so a wrong-sign edit fails loudly rather than drifting. Two cases inject a named zone instead, because a fixed offset cannot exercise what they test: `America/New_York` for the R13a timezone-label case, since a fixed offset renders its short generic name as `GMT-6` and never as `ET`; and `America/Denver` for the daylight-saving window case, since a zone with no transition in it passes that test vacuously whether or not KTD7 was implemented. Injection is what the pin requires; a fixed offset is the default, not the rule. This is the Swift form of the `process.env.TZ = 'Etc/GMT+6'` line in `test/spec.js`; it satisfies the same need without a scheme environment variable or a command-line `TZ`, both of which hide the problem again for everyone else. Governs R24.
 
 KTD4. Tests use Swift Testing, not XCTest. It is the default for a package initialized under this toolchain, `xcodebuild test` and `swift test` both report its results and propagate failures to the exit code, and parameterized cases suit the acceptance examples. One cosmetic artifact to expect: an empty XCTest shim runs first and prints `Executed 0 tests, with 0 failures`, so no log scraping may treat a zero-test line as failure — the exit code is the signal.
 
@@ -261,16 +261,18 @@ flowchart LR
     D[SettingsStore<br/>App Group container]
   end
   subgraph kit["AvailKit — imports Foundation only"]
-    E[Annotator] --> F[BlockFinder] --> G[DayGrouper] --> H[Formatter]
+    I[AvailabilityEngine]
+    I --> E[Annotator] --> F[BlockFinder] --> G[DayGrouper] --> H[Formatter]
+    H --> I
   end
-  A --> C
-  B --> C
-  A --> D
-  B --> D
-  C -->|NormalizedEvent| E
-  D -->|Settings| E
-  H -->|String| A
-  H -->|String| B
+  A --> I
+  B --> I
+  D -->|excluded calendars| C
+  D -->|timezone toggle| I
+  I -->|provider: DateInterval| C
+  C -->|NormalizedEvent| I
+  I -->|rendered text| A
+  I -->|rendered text| B
 ```
 
 The horizon search, which is the part of R2/R2a/R2b most easily got wrong:
@@ -293,13 +295,13 @@ These are the plan's own bets, not product decisions. Each is recorded rather th
 - Deployment target is iOS 18.0 for both targets. It clears the iOS 17 floor that `requestFullAccessToEvents()` needs and stays well under the 26.5 simulator runtime ceiling; a target above 26.5 makes `xcodebuild` reject every available simulator destination.
 - The package manifest declares `swift-tools-version: 6.2`, not the 6.4 this machine's toolchain emits by default. No generally available GitHub macOS runner ships Xcode 27, and a 6.4 manifest is unparseable by every image that does exist, so a 6.4 manifest would make CI structurally unable to run the gate.
 - The bundle identifier prefix is `com.raineorshine`, matching the repository owner. Nothing external depends on it; it is renameable in one place.
+- A full calendar resync can lose a calendar's `calendarIdentifier`. R26 keys the selection on that identifier, so a calendar whose identifier changes reverts to its default blocking state and the owner re-excludes it. Recovering the selection by name would reintroduce the name matching R26 confines to first run.
 - The app group identifier is `group.com.raineorshine.avail`. On iOS the `group.` prefix is mandatory; the team-identifier form is macOS-only.
 - The extension stays in `.compact` presentation and does its work in `willBecomeActive`/`didBecomeActive`, so the text is ready when the compact UI appears. Apple documents no presentation-style requirement for `insertText` — only that the presentation *context* must be `messages`, which `MSSupportedPresentationContexts` pins.
-- The rendered text leads with a newline when the compose field is non-empty. What `insertText` does to text already in the field is undocumented, and this run had no device on which to check; leading with a newline is safe whether it appends or replaces.
 
 ### Implementation Constraints
 
-- `AvailKit` imports Foundation and nothing else. A grep in the verification contract enforces it mechanically alongside the package manifest.
+- `AvailKit` imports Foundation and nothing else. The package manifest makes this structural, and the Verification Contract's allowlist check fails on any other import — a denylist of the frameworks we happen to expect would pass `import AppKit`, which compiles on the macOS destination the gate runs.
 - EventKit fetches are synchronous and must not run on the main thread in either process; a blocked main thread in an extension is a watchdog kill, which is a likelier failure here than memory pressure.
 - The access-request completion handler and `insertText`'s completion handler both fire on arbitrary background queues. Anything touching UI hops to the main actor.
 - One long-lived `EKEventStore` per process. Releasing a store while other EventKit objects are alive is a documented hazard, and objects must not cross stores.
@@ -323,18 +325,19 @@ U1 through U5 deliver the R24 module and its green gate with no Apple frameworks
 
 **Dependencies:** none.
 
-**Files:** `AvailKit/Package.swift`, `AvailKit/Sources/AvailKit/.gitkeep`, `AvailKit/Tests/AvailKitTests/SmokeTests.swift`, `project.yml`, `App/Resources/Info.plist`, `App/Resources/Avail.entitlements`, `MessagesExtension/Resources/Info.plist`, `MessagesExtension/Resources/AvailMessages.entitlements`, `.gitignore`.
+**Files:** `AvailKit/Package.swift`, `AvailKit/Sources/AvailKit/.gitkeep`, `AvailKit/Sources/AvailShared/.gitkeep`, `AvailKit/Tests/AvailKitTests/SmokeTests.swift`, `AvailKit/Tests/AvailSharedTests/SmokeTests.swift`, `project.yml`, `App/Resources/Info.plist`, `App/Resources/Avail.entitlements`, `MessagesExtension/Resources/Info.plist`, `MessagesExtension/Resources/AvailMessages.entitlements`, `MessagesExtension/Resources/Assets.xcassets`, `.gitignore`.
 
 **Approach:**
-1. Manifest declares `swift-tools-version: 6.2`, `platforms: [.iOS(.v18), .macOS(.v14)]`, one library target and one test target, `swiftLanguageModes: [.v6]`. Do not keep what `swift package init` emits — its tools-version and upcoming-feature flags break CI (see Assumptions).
-2. `project.yml` declares the local package by path, an `application` target, and an `app-extension.messages` target; the app depends on both the package product and the extension target, which is what produces the embed phase that puts the `.appex` in `PlugIns/`.
-3. Entitlements are hand-written files referenced by `CODE_SIGN_ENTITLEMENTS`, not added through Xcode's capabilities UI, which fights an app group under automatic signing.
-4. `.gitignore` covers `*.xcodeproj` (generated), `.build/`, and `DerivedData/`.
+1. Manifest declares `swift-tools-version: 6.2`, `platforms: [.iOS(.v18), .macOS(.v14)]`, `swiftLanguageModes: [.v6]`, and two library targets each with its own test target: `AvailKit` (the R24 module) and `AvailShared` (U7's settings value and store). Both are Foundation-only, so both run under the same headless gate. Do not keep what `swift package init` emits — its tools-version and upcoming-feature flags break CI (see Assumptions).
+2. `project.yml` declares the local package by path, an `application` target, and an `app-extension.messages` target; the app depends on both package products and on the extension target, which is what produces the embed phase that puts the `.appex` in `PlugIns/`. Both shells also compile `Shared/Sources`, which holds U6's EventKit code — that code imports EventKit and so cannot live in the package.
+3. Create the extension's `iMessage App Icon` asset set, of type `stickersicon`. It belongs here rather than with the extension's code because without it the extension target does not build, and U1's own verification builds it.
+4. Entitlements are hand-written files referenced by `CODE_SIGN_ENTITLEMENTS`, not added through Xcode's capabilities UI, which fights an app group under automatic signing.
+5. `.gitignore` covers `*.xcodeproj` (generated), `.build/`, and `DerivedData/`.
 
 **Patterns to follow:** none in-repo; this is the first Swift in the repository.
 
 **Test scenarios:**
-- A trivial smoke test asserting the module is importable, so the gate has something to run before U2 exists.
+- A trivial smoke test per package target, asserting each module is importable, so the gate has something to run before U2 exists.
 
 **Verification:** `xcodebuild test -scheme AvailKit -destination 'platform=macOS'` succeeds from `AvailKit/`. `xcodegen generate` followed by a simulator build of the app scheme succeeds and `Avail.app/PlugIns/AvailMessages.appex` exists in the build products.
 
@@ -350,7 +353,7 @@ U1 through U5 deliver the R24 module and its green gate with no Apple frameworks
 
 **Approach:**
 1. `NormalizedEvent` captures the full event record per R22 — title, notes, location, attendees, calendar identity, start, end, all-day flag, response status, availability, and a derived conferencing URL — as `Sendable` value types with no EventKit types in sight.
-2. `Annotator` resolves an entire array in one call, returning one annotation per event, per the KTD that governs R17/R18; a per-event call shape is the thing the seam exists to prevent.
+2. `Annotator` resolves an entire array in one call, returning one annotation per event, per R18 and the Product Contract Key Decision that annotation is a single pre-pass over events; a per-event call shape is the thing the seam exists to prevent.
 3. `DeterministicAnnotator` implements R6, R7, R7a and R8 and is the fallback for R20. Ordering: all-day never blocks; declined never blocks; availability `.free` never blocks; `.notSupported` blocks (KTD10); unknown response status blocks (KTD11).
 4. The R20 fallback wraps any annotator so an error, a timeout, or a thrown result substitutes the deterministic annotations for the whole batch.
 
@@ -406,7 +409,7 @@ U1 through U5 deliver the R24 module and its green gate with no Apple frameworks
 
 **Approach:**
 1. `Horizon` computes the preferred window: day 0 starting at R4's rounded-up time through the end of day 7, extended to day 8 or day 9 so it never ends on a Monday or Tuesday.
-2. A day qualifies when it has at least one block surviving U3. Fewer than five qualifying days triggers one further pass over the following 30 days; fewer than five after both passes emits what there is and stops.
+2. A day qualifies when it has at least one block surviving U3. Fewer than five qualifying days asks the event provider (U5) for the following 30 days and continues the search into them; fewer than five after both passes emits what there is and stops. The provider is called at most twice.
 3. Per day, keep the three longest blocks, ties broken by earlier start, then restore chronological order for rendering (R9a).
 
 **Test scenarios:**
@@ -420,7 +423,7 @@ U1 through U5 deliver the R24 module and its green gate with no Apple frameworks
 - Only two days inside the preferred window qualify: a second pass reads the following 30 days and the search continues into them. *Covers AE5b.*
 - Fewer than five days qualify across both passes: only the qualifying days are emitted and no third pass runs. *Covers AE5d.*
 - A day with five qualifying blocks, two of equal length, keeps the three longest in chronological order with the earlier of the tied pair winning. *Covers AE5c.*
-- A day whose only blocks are under an hour produces no line. *Covers AE10 boundary.*
+- A day whose only blocks are under an hour produces no line. *Covers R10.*
 
 ### U5. Formatter, fixtures, and the pinned suite
 
@@ -437,7 +440,7 @@ U1 through U5 deliver the R24 module and its green gate with no Apple frameworks
 2. Format each block as `h[:mm]am/pm`, omitting the start's suffix when start and end fall in the same half of the day, and render one line per day with the date prefix once and blocks comma-separated.
 3. Build strings from `Calendar.dateComponents` on the injected calendar. Do not reach for `DateFormatter` or `FormatStyle`; both default to the autoupdating locale and the current zone.
 4. The timezone pin is KTD3: a fixture calendar at a fixed −06:00 offset, injected, with a suite assertion on the offset itself.
-5. `AvailabilityEngine` is the module's single entry point — events and settings in, rendered text out — so the app's preview and the extension's insertion are the same code by construction.
+5. `AvailabilityEngine` is the module's single entry point, and it takes an event *provider* — `(DateInterval) throws -> [NormalizedEvent]` — plus settings, not a pre-fetched list. R2a's second pass is a second fetch, and the decision to make it depends on how many days qualified, which only the module knows; a one-shot entry point would push that decision into both shells. A closure over Foundation types keeps R23's purity and R24's import ban intact. The app's preview and the extension's insertion are the same code by construction.
 
 **Execution note:** Derive each expected string from the rules and check it against the Acceptance Examples before writing it down. The fixture's Tuesday event is the direct source of AE4 and should reproduce it exactly.
 
@@ -461,23 +464,29 @@ U1 through U5 deliver the R24 module and its green gate with no Apple frameworks
 
 **Dependencies:** U5.
 
-**Files:** `Shared/Sources/CalendarReader.swift`, `Shared/Sources/CalendarAccess.swift`.
+**Files:** `Shared/Sources/CalendarReader.swift`, `Shared/Sources/CalendarAccess.swift`, `Shared/Sources/Participant.swift`.
 
 **Approach:**
-1. `CalendarAccess` maps `EKAuthorizationStatus` onto the states F4 names — absent, denied, restricted, write-only, full — and owns `requestFullAccessToEvents()` (KTD8).
+1. `CalendarAccess` maps `EKAuthorizationStatus` onto the three states F4 names — absent, denied, write-only — plus `restricted` and `full`, and owns `requestFullAccessToEvents()` (KTD8). Each non-full state carries its own remedy, because iOS prompts once and the obvious guess for a denied grant is the wrong one:
+   - **absent** (`.notDetermined`) — grant in the containing app, which is where the prompt lives.
+   - **denied** — Settings > Privacy & Security > Calendars > Avail. The containing app cannot prompt again, so sending the owner there would be a dead loop.
+   - **write-only** — switch Calendars to Full Access in Settings.
+   - **restricted** — device policy blocks calendar access and neither surface can grant it; say so rather than offering a remedy that cannot work.
+   `restricted` is this plan's addition, not an existing product commitment: F4 and R14a name the other three.
 2. Every fetch is gated on `.fullAccess` (KTD9). One long-lived `EKEventStore`; fetches off the main thread.
-3. One predicate per pass, over the non-excluded calendars only, passed to the predicate rather than filtered afterwards.
-4. Normalization keys occurrences on `(eventIdentifier, startDate)` (KTD12), drops `.canceled` events, and resolves the owner's response status in the KTD11 order. The conferencing URL is derived from the event's url, location and notes, since EventKit exposes no conference property.
+3. The reader is the event provider the engine calls: one predicate per invocation, over the non-excluded calendars only, passed to the predicate rather than filtered afterwards. At most two invocations per generation.
+4. Normalization keys occurrences on `(eventIdentifier, startDate)` (KTD12), drops `.canceled` events, and resolves the owner's response status in the KTD11 order. That resolution takes a Foundation-only participant protocol — name, `isCurrentUser`, status — that `EKParticipant` is adapted to, so the ordering is testable over fakes: `EKParticipant` cannot be constructed and `EKEvent.attendees` is read-only, which would otherwise leave the rule that decides whether an event blocks time with no reachable test. The conferencing URL is derived from the event's url, location and notes, since EventKit exposes no conference property.
 5. Observe `EKEventStore.EventStoreChanged` and refetch; the store does not update in place after a grant.
 
 **Test scenarios:**
-- Each `EKAuthorizationStatus` maps to the F4 state that names its remedy.
-- Normalization of a constructed `EKEvent` carries every R22 field across.
+- Each `EKAuthorizationStatus` maps to its state and remedy.
+- Normalization of a constructed `EKEvent` carries across every R22 field that `EKEvent` permits setting.
+- The KTD11 resolution order returns the current user's status when one is marked, `.accepted` for an organizer with no attendee match, and `.unknown` otherwise — exercised over fake participants.
 - Two occurrences of one recurring series normalize to two distinct events.
 - A `.canceled` event is dropped.
 - A calendar marked excluded contributes no events. *Covers R5.*
 
-**Verification:** The reader compiles into the app and extension targets for the simulator. Its behavior against a real event store is not provable in this run — the simulator's Calendar starts empty and has no account — so coverage stops at mapping and normalization.
+**Verification:** The reader compiles into the app and extension targets for the simulator. The status-mapping and KTD11-ordering scenarios run headlessly over fakes; the normalization and calendar-exclusion scenarios need a populated event store and are unverifiable in this run, since the simulator's Calendar starts empty and has no account.
 
 ### U7. Shared settings store
 
@@ -487,10 +496,10 @@ U1 through U5 deliver the R24 module and its green gate with no Apple frameworks
 
 **Dependencies:** U1.
 
-**Files:** `Shared/Sources/Settings.swift`, `Shared/Sources/SettingsStore.swift`.
+**Files:** `AvailKit/Sources/AvailShared/Settings.swift`, `AvailKit/Sources/AvailShared/SettingsStore.swift`, `AvailKit/Tests/AvailSharedTests/SettingsStoreTests.swift`.
 
 **Approach:**
-1. `Settings` holds the excluded calendar identifiers and the timezone toggle. Per calendar, persist identifier, title, type and source title, not the identifier alone — a full calendar sync loses `calendarIdentifier`, and the extra fields allow re-matching by title and source.
+1. `Settings` holds the excluded calendar identifiers and the timezone toggle, keyed on the EventKit identifier exactly as R26 specifies. An identifier that no longer resolves is dropped and that calendar reverts to blocking; it is not re-matched by name, because R26 confines name matching to first run and an ongoing name match would fight U7's own no-re-seed rule — a calendar the owner re-included could be re-excluded after an identifier churn. The limitation is recorded in the Planning Contract's Assumptions.
 2. `SettingsStore` reads and writes a JSON file in the app group container (KTD5).
 3. First run seeds the exclusion by matching `Supportive and Nourishing Structure` by name once, per R5.
 
@@ -500,7 +509,7 @@ U1 through U5 deliver the R24 module and its green gate with no Apple frameworks
 - A round-trip of settings through the store preserves every field.
 - A missing file yields the documented defaults rather than an error.
 - First run seeds the named exclusion; a later run does not re-seed it after the owner re-includes that calendar. *Covers R5.*
-- A calendar whose identifier no longer resolves is re-matched by title and source.
+- A stored identifier that no longer resolves is dropped, leaving that calendar blocking.
 
 ### U8. Containing app
 
@@ -515,7 +524,7 @@ U1 through U5 deliver the R24 module and its green gate with no Apple frameworks
 **Approach:**
 1. Request access when the calendar screen first appears; until full access is granted, show the grant prompt in place of the list (R27a), with the remedy that matches the current state.
 2. The list shows every calendar with its blocking state, and marks calendars that cannot report free/busy so a surprising result is explainable (KTD10).
-3. The preview renders the exact text the extension would produce at that moment and copies it in one tap.
+3. The preview renders the exact text the extension would produce at that moment and copies it in one tap. It carries the same no-open-time state as the extension (U9) for a zero-line result, with copy disabled.
 4. The window, cap, minimum block and buffers are build-time constants with no on-device editing surface (R28).
 
 **Test scenarios:**
@@ -523,7 +532,7 @@ U1 through U5 deliver the R24 module and its green gate with no Apple frameworks
 - With access absent, the grant prompt replaces the list. *Covers R27a.*
 - With write-only access, the screen names the Settings remedy rather than showing an empty list.
 
-**Verification:** Compiles and the target builds for the simulator. Interactive behavior is not exercised in this run.
+**Verification:** Compiles and the target builds for the simulator. All three test scenarios in this unit are unverifiable in this run: each needs a populated event store and a driven UI, and the simulator's Calendar starts empty with no account.
 
 ### U9. iMessage extension
 
@@ -540,15 +549,18 @@ U1 through U5 deliver the R24 module and its green gate with no Apple frameworks
 2. Work starts in `willBecomeActive(with:)` using the conversation handed in there rather than `activeConversation`, which can be `nil` early. Stay in `.compact` (see Assumptions).
 3. An indeterminate progress indicator shows from tap until the lines replace it (R16a).
 4. The timezone toggle lives in this view, off by default, its last state read from and written to the shared store (R13a).
-5. Insertion is `insertText`; its completion fires on a background queue, so any UI update hops to the main actor. When the status is anything but `.fullAccess`, the view reports which state applies and its remedy instead of rendering availability (R14a).
-6. The extension target needs an `iMessage App Icon` asset of type `stickersicon` or it does not build.
+5. Insertion is `insertText`, which inserts exactly the text R9 through R13a specify and nothing more. Its completion fires on a background queue, so any UI update hops to the main actor: on success the Insert control is replaced by an inserted confirmation, which also removes the second-tap question, since what `insertText` does to a non-empty compose field is undocumented; on failure the view says so rather than sitting unchanged.
+6. The view has four terminal states, not two: rendered lines; a permission message naming the state and its remedy (U6); an inserted confirmation; and — when the engine returns zero lines, which R2b permits — a message that no open time was found across both passes, with the insert control disabled rather than an empty string offered.
+7. Compact layout: a scrollable text area carrying whichever message or lines apply, above a fixed bottom row holding the timezone toggle and a single Insert button. The bottom row stays pinned and visible at every Dynamic Type size — the compact presentation is keyboard-height, and a layout that lets five lines push Insert off-screen makes the Goal Capsule's two-tap objective unreachable.
 
 **Test scenarios:**
 - The view's state machine moves from progress to rendered text, and from progress to a permission message when the status is not `.fullAccess`.
-- Each non-full authorization state produces the message naming its own remedy. *Covers F4.*
+- Each of the four non-full authorization states produces the message naming its own remedy. *Covers F4.*
+- A zero-line result reaches the no-open-time state with insertion disabled, rather than offering an empty string.
+- A successful insertion completion reaches the inserted confirmation; a failed one surfaces the failure.
 - The toggle's state survives a simulated resign-and-reactivate. *Covers R13a.*
 
-**Verification:** The target compiles for the simulator and the `.appex` embeds in `PlugIns/`. Tap-to-insert is not exercised in this run — an iMessage extension needs the Messages UI, which an unattended session cannot drive.
+**Verification:** The target compiles for the simulator and the `.appex` embeds in `PlugIns/`. Every test scenario in this unit is unverifiable in this run: an iMessage extension activates only through the Messages UI, which an unattended session cannot drive. AE12 (text inserted unsent and editable) is unverifiable for the same reason and has no `Covers AE12` scenario anywhere.
 
 ### U10. Remove the JavaScript implementation and rewrite the repository's documentation and CI
 
@@ -564,11 +576,11 @@ U1 through U5 deliver the R24 module and its green gate with no Apple frameworks
 1. Delete the Express OAuth server, the stdin CLI, the JavaScript algorithm, the Node manifest and lockfile, and the mocha suite. The fixtures move to the Swift test target in U5 rather than being deleted outright.
 2. Rewrite `AGENTS.md`'s intro, `## Repo` file map, `### Dependencies` and `### Testing` for the Swift layout, the `xcodebuild` commands, and the timezone-pin rule in its Swift form. Preserve `### Git` and `## Session titles` verbatim — they are workflow conventions that nothing in this work invalidates, and the `### Git` sentence about landing via fast-forward merge with no PRs stays as written.
 3. Rewrite `README.md`, which currently documents the web server and the CLI.
-4. Replace the workflow with the Swift gate on a pinned `macos-26` runner. The app-and-extension compile check needs Xcode 27, which exists only on a preview runner label, so it does not belong in the blocking gate.
+4. Replace the workflow with the Swift gate on a pinned `macos-26` runner. Add the app-and-extension compile check as a second, non-blocking job on the same runner after an `xcodegen` install step: nothing in that build needs Xcode 27, since the deployment target is iOS 18.0 and the runner's Xcode 26.6 iOS SDK builds it for `generic/platform=iOS Simulator`. It stays non-blocking because the module gate is what must be green; it exists because the stickersicon asset, the principal-class prefix, the entitlements and the embed phase are the parts of this plan most likely to break silently.
 
 **Test scenarios:** `Test expectation: none -- deletions and documentation. The gate is that the Swift suite is green without the removed files and that no source or workflow still references them.`
 
-**Verification:** The module gate passes with the JavaScript gone. No file in the repository references `find-free-blocks.js`, `mocha`, or `yarn`. `AGENTS.md`'s `### Git` and `## Session titles` sections are byte-identical to their previous contents.
+**Verification:** The module gate passes with the JavaScript gone. No source file or workflow in the repository references `find-free-blocks.js`, `mocha`, or `yarn` — this plan's own Sources / Research and KTD6 still cite `find-free-blocks.js` as the specification they came from, and must. `AGENTS.md`'s `### Git` and `## Session titles` sections are byte-identical to their previous contents.
 
 ---
 
@@ -580,13 +592,23 @@ U1 through U5 deliver the R24 module and its green gate with no Apple frameworks
 xcodebuild test -scheme AvailKit -destination 'platform=macOS'
 ```
 
-It must report `** TEST SUCCEEDED **` and exit 0; a failure exits 65. Do not pass `-quiet` — it suppresses the lines that say what happened, which is the whole value of the log in an unattended run. `swift test --package-path AvailKit` is the equivalent and is what CI runs.
+It must report `** TEST SUCCEEDED **` and exit 0; a failure exits 65. Do not pass `-quiet` — it suppresses the lines that say what happened, which is the whole value of the log in an unattended run.
+
+That scheme covers the R24 module only. `AvailShared`'s tests are a second scheme, so the full headless suite is either both `xcodebuild` invocations or the one command that runs every test target:
+
+```
+swift test --package-path AvailKit
+```
+
+That is what CI runs, and it is the command to use when the question is whether everything testable is green.
 
 **Module purity**, enforcing R24 mechanically:
 
 ```
-! grep -rqE '^import (EventKit|SwiftUI|UIKit|Messages)' AvailKit/Sources
+! grep -rhE '^import ' AvailKit/Sources | grep -qvE '^import Foundation$'
 ```
+
+An allowlist, not a denylist: the gate runs on the macOS destination, where `import AppKit` would compile and a denylist naming only the iOS frameworks would wave it through.
 
 **App and extension compile**, from the repository root after `xcodegen generate`:
 
@@ -594,7 +616,7 @@ It must report `** TEST SUCCEEDED **` and exit 0; a failure exits 65. Do not pas
 xcodebuild build -project Avail.xcodeproj -scheme Avail -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO
 ```
 
-It must report `** BUILD SUCCEEDED **` and produce `Avail.app/PlugIns/AvailMessages.appex`. The signing flag is a guard so the job can never stall on a keychain; drop it for any build that will actually run on a simulator, because unsigned products carry no entitlements and the app group container then resolves to `nil`.
+It must report `** BUILD SUCCEEDED **` and produce `Avail.app/PlugIns/AvailMessages.appex`. The signing flag is a guard so the job can never stall on a keychain; see the Implementation Constraints entry for why it must not be used for a build that will actually run on a simulator.
 
 **Out of scope for this gate.** On-device install, distribution signing, tap-to-insert in Messages, and behavior against a populated calendar are not exercised: there is no paired device, no interactive signing, and the simulator's Calendar starts empty with no account. Nothing in this contract should be read as evidence that the app ran on hardware.
 
@@ -609,7 +631,7 @@ It must report `** BUILD SUCCEEDED **` and produce `Avail.app/PlugIns/AvailMessa
 - The app and extension compile for the simulator and the `.appex` embeds.
 - Every Acceptance Example AE1–AE14 is either enforced by a test scenario carrying its `Covers AE<N>` link or explicitly recorded as unverifiable in this run, with the reason.
 - No expected output string was copied from `test/spec.js`; each was recomputed from R1, R8, R9 and R11.
-- The JavaScript implementation, its manifest, its lockfile and its workflow are gone, and nothing references them.
+- The JavaScript implementation, its manifest, its lockfile and its workflow are gone, and no source file or workflow references them.
 - `AGENTS.md` describes the Swift repository, with `### Git` and `## Session titles` preserved verbatim.
 - The calendar-grant finding -- container-scoped and inherited by the extension, simulator-verified -- is recorded where it survives the merge, with its residual device caveat.
 - No dead-end or experimental code from approaches that did not pan out remains in the diff.
