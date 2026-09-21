@@ -25,18 +25,26 @@ the title back if the ship does not land. Do not report either. See `AGENTS.md` 
 ### 1. Quality gate (must pass before committing)
 
 ```bash
-npm test
+cd AvailKit && xcodebuild test -scheme AvailKit-Package -destination 'platform=macOS'
 ```
 
-- `npm test` — mocha over `test/spec.js`, the full suite once. There is no lint, formatter, type
-  check, or build step in this repo, so this is the whole gate.
-- It must be **green**, not "green except the known ones". The suite was red for years only because
-  its expectations were timezone-dependent; `test/spec.js` now pins `process.env.TZ` to `Etc/GMT+6`
-  before its requires, so a failure is a real failure. If a new spec file drifts by exactly an hour
-  or two, it is missing that line — fix the spec, don't set `TZ` on the command line, which would
-  hide it again for everyone else.
-- Runs from a worktree without `npm install`: a worktree has no `node_modules`, and node resolves
-  the main checkout's by walking up from `.claude/worktrees/<name>/`.
+- The Foundation-only Swift package, against this Mac. No simulator runtime, no signing, no device,
+  and nothing to install first. It must print `** TEST SUCCEEDED **`; a failure exits 65.
+- The scheme is `AvailKit-Package`, not `AvailKit`. SwiftPM vends a build-only scheme per library
+  product and puts the test action on the aggregate, so `-scheme AvailKit` answers `Scheme AvailKit
+  is not currently configured for the test action`. `swift test --package-path AvailKit` is the
+  equivalent and is what CI runs.
+- Ignore the empty XCTest shim that prints `Executed 0 tests, with 0 failures` ahead of the real
+  run. The exit code is the signal, not that line.
+- It must be **green**, not "green except the known ones". If expectations drift by exactly an hour
+  or two, a test is reading the machine's timezone instead of injecting `Fixture.calendar` — fix the
+  test, don't set `TZ` on the command line, which would hide it again for everyone else. See
+  `AGENTS.md` (Repo → Testing).
+- When the change touches anything outside the package, compile-check the shells too:
+
+  ```bash
+  xcodegen generate && xcodebuild build -project Avail.xcodeproj -scheme Avail -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO
+  ```
 
 Fix every failure and re-run before proceeding.
 
@@ -47,7 +55,7 @@ Generate a commit message from the diff. Use an imperative, sentence-case subjec
 `AGENTS.md` (Repo → Git). When `learn` is the caller, commit only the files it edited — it lands its
 learnings alone — and say what was left behind.
 
-Never commit `config.json`; it holds the Google API credentials and is gitignored.
+Never commit `Avail.xcodeproj`; xcodegen generates it from `project.yml` and it is gitignored.
 
 ### 3. Rebase on master
 
@@ -124,8 +132,6 @@ MAIN="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")" && 
 
 - Push `master` to `origin` from the main worktree. Already done if step 5 fell back to pushing
   `HEAD:master`.
-- If `package.json` or `yarn.lock` changed, run `yarn install` in the main worktree so its
-  dependencies match.
 - The branch is now merged into `master`. If this worktree is finished with, it and the branch can
   be cleaned up from the main checkout:
 

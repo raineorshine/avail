@@ -8,12 +8,28 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    # The gate: the Foundation-only package, against the runner's own Mac. No
+    # simulator runtime, no signing, no device.
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '24'
-          cache: yarn
-      - run: yarn install --frozen-lockfile
-      - run: npm test
+      - run: swift test --package-path AvailKit
+
+  build:
+    # Non-blocking on purpose: the module gate above is what must be green.
+    # This exists because the stickers icon, the principal-class prefix, the
+    # entitlements and the embed phase are the parts most likely to break
+    # silently, and none of them is reachable from the package.
+    runs-on: macos-26
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - run: brew install xcodegen
+      - run: xcodegen generate
+      - name: Build the app and the embedded extension
+        run: |
+          xcodebuild build \
+            -project Avail.xcodeproj \
+            -scheme Avail \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO
