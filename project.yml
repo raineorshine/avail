@@ -1,0 +1,75 @@
+name: Avail
+options:
+  bundleIdPrefix: com.raineorshine
+  deploymentTarget:
+    iOS: "18.0"
+  createIntermediateGroups: true
+  minimumXcodeGenVersion: "2.40.0"
+
+packages:
+  AvailKit:
+    path: AvailKit
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    GENERATE_INFOPLIST_FILE: NO
+    CURRENT_PROJECT_VERSION: "1"
+    MARKETING_VERSION: "1.0"
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+
+targets:
+  Avail:
+    type: application
+    platform: iOS
+    sources:
+      - App/Sources
+      - Shared/Sources
+      - path: App/Resources/Info.plist
+        buildPhase: none
+      - path: App/Resources/Avail.entitlements
+        buildPhase: none
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.raineorshine.avail
+        PRODUCT_NAME: Avail
+        INFOPLIST_FILE: App/Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: App/Resources/Avail.entitlements
+        TARGETED_DEVICE_FAMILY: "1,2"
+    dependencies:
+      - package: AvailKit
+        product: AvailKit
+      - package: AvailKit
+        product: AvailShared
+      - target: AvailMessages
+        embed: true
+      - sdk: EventKit.framework
+
+  AvailMessages:
+    type: app-extension.messages
+    platform: iOS
+    sources:
+      - MessagesExtension/Sources
+      - Shared/Sources
+      - MessagesExtension/Resources/Assets.xcassets
+      - path: MessagesExtension/Resources/Info.plist
+        buildPhase: none
+      - path: MessagesExtension/Resources/AvailMessages.entitlements
+        buildPhase: none
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.raineorshine.avail.messages
+        PRODUCT_NAME: AvailMessages
+        INFOPLIST_FILE: MessagesExtension/Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: MessagesExtension/Resources/AvailMessages.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: "iMessage App Icon"
+        TARGETED_DEVICE_FAMILY: "1,2"
+    dependencies:
+      - package: AvailKit
+        product: AvailKit
+      - package: AvailKit
+        product: AvailShared
+      - sdk: EventKit.framework
+      - sdk: Messages.framework
